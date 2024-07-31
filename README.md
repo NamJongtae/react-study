@@ -60,6 +60,8 @@
 
 **[📘 React Redux & Redux-toolkit](https://spotted-operation-dcc.notion.site/React-Redux-Redux-toolkit-40ec0d72469f4d6487e369ea06b82df3?pvs=4)**
 
+**[📘 React & Closure](https://spotted-operation-dcc.notion.site/React-Closure-a984a9d0606b4802b8ef2da48bbaec95?pvs=74)**
+
 <br/>
 
 ##  🧹 Clean-Code-React
