@@ -64,6 +64,8 @@
 
 **[📘useEffect 깊게 살펴보기](https://spotted-operation-dcc.notion.site/useEffect-342db03cbf944f73959d90a48f59bdbf?pvs=74)**
 
+**[📘useReducer 깊게 살펴보기](https://spotted-operation-dcc.notion.site/useReducer-27355cb9cdc24756bdacb282ba7c6567?pvs=74)**
+
 <br/>
 
 ##  🧹 Clean-Code-React
