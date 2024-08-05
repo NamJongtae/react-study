@@ -66,9 +66,11 @@
 
 **[📘useReducer 깊게 살펴보기](https://spotted-operation-dcc.notion.site/useReducer-27355cb9cdc24756bdacb282ba7c6567?pvs=74)**
 
+**[📘React SSR 구현](https://spotted-operation-dcc.notion.site/React-SSR-8c6663e8bdcc4d8ab3c4f7512e628337?pvs=74)**
+
 <br/>
 
-##  🧹 Clean-Code-React
+## 🧹 Clean-Code-React
 
 **🔗 [Clean-Code-React](https://spotted-operation-dcc.notion.site/2f2ce40a4ecc4971b8fc697eb2d091c7?pvs=4)**
 
