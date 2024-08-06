@@ -68,6 +68,8 @@
 
 **[📘React SSR 구현](https://spotted-operation-dcc.notion.site/React-SSR-8c6663e8bdcc4d8ab3c4f7512e628337?pvs=74)**
 
+**[📘React Flux 패턴과 등장 배경](https://spotted-operation-dcc.notion.site/React-Flux-f07db34de5b647d89432c70a1e3900a8?pvs=74)**
+
 <br/>
 
 ## 🧹 Clean-Code-React
