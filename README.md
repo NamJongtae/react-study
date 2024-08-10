@@ -70,6 +70,8 @@
 
 **[📘React Flux 패턴과 등장 배경](https://spotted-operation-dcc.notion.site/React-Flux-f07db34de5b647d89432c70a1e3900a8?pvs=74)**
 
+**[📘React 상태관리 라이브러리 구현](https://spotted-operation-dcc.notion.site/React-98620e397bd046abac6549001b65fc67?pvs=74)**
+
 <br/>
 
 ## 🧹 Clean-Code-React
