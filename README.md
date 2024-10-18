@@ -46,6 +46,8 @@
 
 **17. [📘 HOC](https://spotted-operation-dcc.notion.site/17-HOC-High-Order-Component-56a95c5fc88e4679949cb89d51ef51ef?pvs=4)**
 
+**18. [📘 useTransition & useDeferredValue](https://spotted-operation-dcc.notion.site/18-useTransition-useDeferredValue-12212b90211180d6a8e1ed8dd66bad7f)**
+
 ---
 
 ### 🗂 추가 자료
@@ -62,15 +64,25 @@
 
 **[📘 React & Closure](https://spotted-operation-dcc.notion.site/React-Closure-a984a9d0606b4802b8ef2da48bbaec95?pvs=74)**
 
-**[📘useEffect 깊게 살펴보기](https://spotted-operation-dcc.notion.site/useEffect-342db03cbf944f73959d90a48f59bdbf?pvs=74)**
+**[📘 useEffect 깊게 살펴보기](https://spotted-operation-dcc.notion.site/useEffect-342db03cbf944f73959d90a48f59bdbf?pvs=74)**
 
-**[📘useReducer 깊게 살펴보기](https://spotted-operation-dcc.notion.site/useReducer-27355cb9cdc24756bdacb282ba7c6567?pvs=74)**
+**[📘 useReducer 깊게 살펴보기](https://spotted-operation-dcc.notion.site/useReducer-27355cb9cdc24756bdacb282ba7c6567?pvs=74)**
 
-**[📘React SSR 구현](https://spotted-operation-dcc.notion.site/React-SSR-8c6663e8bdcc4d8ab3c4f7512e628337?pvs=74)**
+**[📘 React SSR 구현](https://spotted-operation-dcc.notion.site/React-SSR-8c6663e8bdcc4d8ab3c4f7512e628337?pvs=74)**
 
-**[📘React Flux 패턴과 등장 배경](https://spotted-operation-dcc.notion.site/React-Flux-f07db34de5b647d89432c70a1e3900a8?pvs=74)**
+**[📘 React Flux 패턴과 등장 배경](https://spotted-operation-dcc.notion.site/React-Flux-f07db34de5b647d89432c70a1e3900a8?pvs=74)**
 
-**[📘React 상태관리 라이브러리 구현](https://spotted-operation-dcc.notion.site/React-98620e397bd046abac6549001b65fc67?pvs=74)**
+**[📘 React 상태관리 라이브러리 구현](https://spotted-operation-dcc.notion.site/React-98620e397bd046abac6549001b65fc67?pvs=74)**
+
+**[📘 React 19 - React Compiler](https://spotted-operation-dcc.notion.site/React-Compiler-11f12b9021118098a5f3f1f7d0559910?pvs=74)**
+
+**[📘 React 19 - use Hook](https://spotted-operation-dcc.notion.site/use-Hook-11f12b90211180308cb9e74b5390f439?pvs=74)**
+
+**[📘 React 19 - Actions](https://spotted-operation-dcc.notion.site/Actions-11f12b90211180cebf18edae6d3ce05e)**
+
+**[📘 React 19 - Server Components](https://spotted-operation-dcc.notion.site/Server-Components-12112b902111802d9942f430c11cff22)**
+
+**[📘 React 19 - 기타 변경 사항](https://spotted-operation-dcc.notion.site/Etc-12112b90211180269a10da12004386dc)**
 
 <br/>
 
