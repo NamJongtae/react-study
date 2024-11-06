@@ -74,6 +74,12 @@
 
 **[📘 React 상태관리 라이브러리 구현](https://spotted-operation-dcc.notion.site/React-98620e397bd046abac6549001b65fc67?pvs=74)**
 
+**[📘 React 렌더링 깊게 살펴보기](https://spotted-operation-dcc.notion.site/React-13112b90211180d5bf86dbffbf2687a8?pvs=74)**
+
+**[📘 React Hydration 깊게 살펴보기](https://spotted-operation-dcc.notion.site/Hydration-13212b902111808db3c8d673162d446b)**
+
+**[📘 React 18 - 변경 사항](https://spotted-operation-dcc.notion.site/Server-Components-12112b902111802d9942f430c11cff22)**
+
 **[📘 React 19 - React Compiler](https://spotted-operation-dcc.notion.site/React-Compiler-11f12b9021118098a5f3f1f7d0559910?pvs=74)**
 
 **[📘 React 19 - use Hook](https://spotted-operation-dcc.notion.site/use-Hook-11f12b90211180308cb9e74b5390f439?pvs=74)**
