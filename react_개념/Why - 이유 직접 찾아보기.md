@@ -13,6 +13,16 @@ React 공식 문서를 살펴보면서 기존에 이해하였던 내용을 더 �
 
 - [5. Virtual DOM은 어떻게 동작할까?](#5-virtual-dom은-어떻게-동작할까)
 
+- [6. useEffect는 어떻게 동작할까?](#6-useeffect는-어떻게-동작할까)
+
+- [7. useMemo, useCallback, React.memo는 어떻게 동작할까?](#7-usememo-usecallback-reactmemo는-어떻게-동작할까)
+
+- [8. React에서 상태관리 라이브러리가 왜 필요할까?](#8-react에서-상태관리-라이브러리가-왜-필요할까)
+
+- [9. React Hooks의 기본 동작원리는 무엇일까?](#9-react-hooks의-기본-동작원리는-무엇일까)
+
+- [10. React가 어떻게 SPA를 구현할까?](#10-react가-어떻게-spa를-구현할까)
+
 <br/>
 
 ## 1. JSX가 어떻게 컴파일 될까?
@@ -387,3 +397,564 @@ function FiberNode(tag, pendingProps, key, mode) {
 위 파이버 트리를 도식화 하면 아래와 같습니다.
 
 ![2024-03-09T08_16_51.webp](https://velog.velcdn.com/images/njt6419/post/7ae13a52-21d2-45a1-9a98-5215814199e8/image.webp)
+
+<br/>
+
+## 6. useEffect는 어떻게 동작할까?
+
+`useEffect` hook은 컴포넌트에서 **부수 효과(side effect)**를 관리하기 위한 훅입니다.
+
+`useEffect`는 클래스형 컴포넌트의 `componentDidMount`, `componentDidUpdate`, `componentWillUnmount`의 기능을 합친 훅으로 이해할 수 있습니다.
+
+### 내부 동작 원리
+
+`useEffect`는 기본적으로 **렌더링 이후 비동기적으로 실행**됩니다. 즉, React가 렌더링을 완료하고 화면에 변경사항을 반영한 후 `useEffect`가 실행됩니다. 이를 통해 렌더링 성능에 영향을 주지 않고 부수 효과를 처리할 수 있습니다.
+
+React는 `useEffect`를 두 가지 경우에 실행합니다:
+
+- **첫 번째 렌더링 시**: 의존성 배열이 `[]`일 경우에만 `useEffect`가 첫 번째 렌더링 후에 한 번 실행됩니다.
+- **의존성 값이 변경될 때**: 의존성 배열이 주어진 경우, 배열 내의 값 중 하나라도 변경되면 `useEffect`가 다시 실행됩니다.
+
+`useEffect`는 내부적으로 **의존성 배열을 저장하고 비교**하여 효과를 실행할지를 결정합니다. 이때 React는 다음과 같은 방식으로 의존성 배열을 처리합니다:
+
+- `useEffect`가 호출될 때마다 React는 내부적으로 의존성 배열을 기록합니다.
+- 이후 렌더링 시 `useEffect`가 다시 호출되면 이전에 저장된 의존성 배열과 현재의 의존성 배열을 비교합니다. 이때, `Object.is` 를 기반으로 얕은 비교를 수행하여 의존성 배열을 비교합니다.
+- **배열 내의 값이 변경되었는지**를 확인하여, 변경된 경우에만 `useEffect`의 콜백 함수를 재실행합니다.
+
+`useEffect`는 **클린업 함수를 반환**할 수 있으며, 이 함수는 다음 상황에서 호출됩니다:
+
+- 컴포넌트가 언마운트될 때: 주로 이벤트 리스너 제거, 타이머 해제 등 리소스를 해제할 때 사용합니다.
+- `useEffect`가 다시 실행되기 직전에: 이전 `useEffect`의 효과를 제거하고 새롭게 실행하기 위해 호출됩니다.
+
+### 동작 방식과 용도
+
+- **컴포넌트가 마운트될 때** (`componentDidMount`): 의존성 배열이 빈 배열 `[]`이면 `useEffect`는 컴포넌트가 마운트될 때 한 번만 실행됩니다.
+    
+    ```jsx
+    useEffect(() => {
+      console.log("컴포넌트가 처음 마운트되었습니다.");
+    }, []);
+    ```
+    
+- **특정 값이 변경될 때** (`componentDidUpdate`): 의존성 배열에 값이 포함된 경우, 해당 값이 변경될 때마다 `useEffect`가 실행됩니다.
+    
+    ```jsx
+    useEffect(() => {
+      console.log("count가 변경되었습니다.", count);
+    }, [count]);
+    ```
+    
+    위 코드에서는 `count`가 변경될 때마다 `useEffect`가 실행됩니다.
+    
+- **클린업 함수** (`componentWillUnmount`): `useEffect` 안에서 함수가 반환되면, 컴포넌트가 언마운트될 때 또는 다음 렌더링 전에 실행됩니다. 이를 **클린업 함수**라고 부르며, 타이머 정리, 구독 해제 등 리소스를 정리할 때 주로 사용합니다.
+    
+    ```jsx
+    useEffect(() => {
+      const timer = setInterval(() => {
+        console.log("타이머 실행 중");
+      }, 1000);
+    
+      // 클린업 함수
+      return () => {
+        clearInterval(timer);
+        console.log("타이머가 정리되었습니다.");
+      };
+    }, []);
+    ```
+    
+### 💡 useEffect (부수 효과)사용을 최소화 해야하는 이유
+
+`useEffect`는 렌더링이 완료된 후에 비동기적으로 실행됩니다. 컴포넌트 상태나 의존성 값이 변경될 때마다 `useEffect`는 렌더링 이후에 한 번씩 실행되므로, 의존성 값이 자주 변경될 경우 `useEffect`가 빈번하게 실행될 수 있습니다. 이로 인해 다음과 같은 성능 문제가 발생할 수 있습니다:
+
+- **불필요한 연산 발생**: 매 렌더링마다 부수 효과가 다시 실행되면 불필요한 데이터 요청이나 상태 계산이 발생할 수 있습니다.
+- **리렌더링 증가**: `useEffect` 내에서 상태를 설정하거나 다른 상태를 업데이트하는 경우, 추가 리렌더링이 발생하여 성능 저하로 이어질 수 있습니다.
+
+### 💡 useEffect의 의존성 배열을 ESLint 규칙과 일치시켜야 하는 이유
+
+의존성 배열에 **필요한 모든 변수를 포함**해야 `useEffect`가 의도한 대로만 실행됩니다. 만약 필요한 변수를 의존성 배열에 포함하지 않으면, `useEffect` 내부에서 사용하는 값이 예상치 못하게 변경되더라도 `useEffect`가 다시 실행되지 않아 부작용이 발생할 수 있습니다.
+
+useEffect의 의존성은 선택적으로 사용하는 것이 아닌 side Effect의 코드에서 사용되는 모든 반응형 값은 의존성 목록에 선언되어야합니다.
+
+<br/>
+
+## 7. useMemo, useCallback, React.memo는 어떻게 동작할까?
+
+### useMemo : 값 메모이제이션
+
+`useMemo`는 계산이 **비용이 큰 값**을 메모이제이션하여, 의존성이 변경되지 않는 한 동일한 값을 반환하게 합니다. `useMemo`를 사용하면 매번 렌더링 때마다 값을 다시 계산하지 않고 **이전에 계산한 값을 재사용**하므로 성능이 향상됩니다.
+
+**useMemo 내부 구현 코드**
+
+```jsx
+export function useMemo<T>(
+  create: () => T,
+  deps: Array<mixed> | void | null,
+): T {
+  const dispatcher = resolveDispatcher();
+  return dispatcher.useMemo(create, deps);
+}
+```
+
+- `useMemo`는 `create` 함수와 `deps` 배열을 인자로 받습니다.
+- 실제 구현은 `dispatcher.useMemo`로 위임됩니다.
+- `resolveDispatcher` 함수는 현재 React의 렌더링 단계에 따라 적절한 dispatcher를 반환합니다.
+
+```jsx
+function resolveDispatcher() {// Hooks에서 호출하는 함수 코드.
+  const dispatcher = ReactCurrentDispatcher.current; // ReactCurrentDispatcher의 current를 본다.
+  if (__DEV__) { // 리액트의 경우 개발모드에서만 에러를 출력하고 프로덕트에서 최적화 하는 부분이 존재한다.
+    if (dispatcher === null) { // 잘못된 호출에 대한 에러 출력.
+      console.error(
+        'Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for' +
+          ' one of the following reasons:\n' +
+          '1. You might have mismatching versions of React and the renderer (such as React DOM)\n' +
+          '2. You might be breaking the Rules of Hooks\n' +
+          '3. You might have more than one copy of React in the same app\n' +
+          'See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.',
+      );
+    }
+  }
+  // Will result in a null access error if accessed outside render phase. We
+  // intentionally don't throw our own error because this is in a hot path.
+  // Also helps ensure this is inlined.
+  return ((dispatcher: any): Dispatcher);
+}
+```
+
+- **`ReactCurrentDispatcher` 객체**
+    - `ReactCurrentDispatcher`는 React의 내부 객체로, `current` 속성을 통해 **현재 활성화된 디스패처**를 참조합니다.
+    - 이 `current`는 React의 렌더링 단계에 따라 **마운트 단계**에서는 `mountDispatcher`, **업데이트 단계**에서는 `updateDispatcher`로 설정됩니다.
+- **`resolveDispatcher` 함수**
+    - `resolveDispatcher`는 `ReactCurrentDispatcher.current`를 읽어, 현재 활성화된 디스패처를 가져옵니다.
+    - 만약 `current`가 `null`이라면, React는 컴포넌트 외부에서 훅을 호출했거나 아직 디스패처가 초기화되지 않은 경우입니다. 이때 에러를 발생시켜 **훅을 잘못된 위치에서 호출하지 않도록 보호**합니다.
+    - 정상적으로 `current`에 값이 있다면, 해당 디스패처를 반환합니다.
+    
+
+**dispatcher**
+
+```jsx
+function mountMemo<T>(
+  nextCreate: () => T,
+  deps: Array<mixed> | void | null,
+): T {
+  const hook = mountWorkInProgressHook();
+  const nextDeps = deps === undefined ? null : deps;
+  const nextValue = nextCreate();
+  hook.memoizedState = [nextValue, nextDeps];
+  return nextValue;
+}
+
+function updateMemo<T>(
+  nextCreate: () => T,
+  deps: Array<mixed> | void | null,
+): T {
+  const hook = updateWorkInProgressHook();
+  const nextDeps = deps === undefined ? null : deps;
+  const prevState = hook.memoizedState;
+  if (prevState !== null) {
+    if (nextDeps !== null) {
+      const prevDeps: Array<mixed> | null = prevState[1];
+      if (areHookInputsEqual(nextDeps, prevDeps)) {
+        return prevState[0];
+      }
+    }
+  }
+  const nextValue = nextCreate();
+  hook.memoizedState = [nextValue, nextDeps];
+  return nextValue;
+}
+```
+
+- **`mountMemo`**: 처음 `useMemo`가 호출될 때 실행되는 함수입니다.
+    - `mountWorkInProgressHook()`을 호출하여 현재 훅의 상태를 설정할 공간을 가져옵니다.
+    - `nextCreate()`를 호출하여 메모이제이션할 **값을 계산**하고, 이를 `memoizedState`에 저장합니다.
+    - 의존성 배열(`deps`)이 전달되면 이를 함께 저장하여, 이후 렌더링 시 변경 여부를 확인할 수 있습니다.
+- **`updateMemo`**: 이미 마운트된 `useMemo` 훅이 업데이트될 때 호출됩니다.
+    - `updateWorkInProgressHook()`을 통해 현재 훅의 상태에 접근합니다.
+    - `memoizedState`에서 **이전 값과 이전 의존성 배열**을 가져옵니다.
+    - `areHookInputsEqual`을 사용하여 **이전 의존성과 현재 의존성을 비교**합니다. 의존성이 같으면 이전에 계산된 값을 반환하여 불필요한 재계산을 방지합니다.
+    - 만약 의존성이 달라졌다면, `nextCreate()`를 호출하여 새 값을 계산하고, `memoizedState`에 새로운 값과 의존성 배열을 저장합니다.
+    
+
+의존성 배열은 `useMemo`의 두 번째 인자로 전달되며, 이 배열의 값들이 변경될 때만 메모이제이션된 값을 재계산합니다. React는 이전 렌더링의 의존성 값들과 현재 렌더링의 값들을 비교합니다:
+내부적으로는 `Object.is`를 사용하여 비교합니다.
+
+```jsx
+function areHookInputsEqual(
+  nextDeps: Array<mixed>,
+  prevDeps: Array<mixed> | null,
+) {
+  if (prevDeps === null) {
+    return false;
+  }
+  for (let i = 0; i < prevDeps.length && i < nextDeps.length; i++) {
+    if (Object.is(nextDeps[i], prevDeps[i])) {
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+
+```
+
+`Object.is`를 사용하여 각 의존성을 비교합니다. 모든 의존성이 동일하면 `true`를 반환하여 메모이제이션된 값을 재사용합니다.
+
+**동작 원리 정리**
+
+```jsx
+const memoizedValue = useMemo(() => {
+  return computeExpensiveValue(a, b);
+}, [a, b]);
+```
+
+- React는 `useMemo` 내부의 계산이 최초 렌더링에서 한 번 수행된 후 결과 값을 **캐시**에 저장합니다.
+- 이후 리렌더링 시 `useMemo`는 의존성 배열을 확인하여, `a`나 `b` 값이 변경되지 않으면 **캐시된 값**을 반환합니다.
+- 의존성 배열의 값이 변경되면 `useMemo`는 내부의 계산을 다시 실행하고, 결과 값을 업데이트하여 캐시에 저장합니다.
+
+### useCallback : 함수 메모이제이션
+
+`useCallback`은 **특정 함수의 메모이제이션**을 수행하여, 함수가 불필요하게 재생성되지 않도록 합니다. 이 훅은 **콜백 함수가 동일한 참조값**을 가지도록 유지하고, 의존성이 변경되지 않는 한 **이전의 함수 참조를 재사용**합니다. 주로 `props`로 자식 컴포넌트에 함수를 전달할 때 사용합니다.
+
+```jsx
+const memoizedCallback = useCallback(() => {
+  doSomething(a, b);
+}, [a, b]);
+```
+
+**useCallback 내부 구현 코드**
+
+```jsx
+function useCallback<T extends (...args: any[]) => any>(
+  callback: T,
+  deps: Array<any> | void | null,
+): T {
+  return useMemo(() => callback, deps);
+}
+```
+
+- **`useMemo` 호출**
+    - `useCallback`은 `useMemo`를 통해 내부적으로 동일한 함수 참조를 관리합니다.
+    - `useMemo`의 첫 번째 인자로 `() => callback`을 전달하여 **callback 함수 자체**가 아닌, **함수를 반환하는 래퍼 함수**를 사용합니다.
+    - 이렇게 함으로써, `callback` 함수의 참조가 유지되며 `useCallback`이 함수 메모이제이션 훅으로 작동하게 됩니다.
+- **의존성 배열에 따라 메모이제이션**
+    - `deps` 배열이 전달되면, `useMemo`는 이 배열의 값이 변경될 때에만 새 함수를 생성합니다.
+    - `deps` 배열 내 값이 변하지 않으면 `useMemo`는 이전에 메모이제이션된 함수 참조를 반환하여, `callback` 함수가 불필요하게 재생성되지 않도록 합니다.
+    - 
+
+**`useCallback`이 `useMemo`를 래핑하는 이유?**
+
+`useCallback`은 함수 자체를 메모이제이션하는 것이기 때문에 `useMemo`를 통해 동일한 의존성 배열 기반 메모이제이션 원리를 활용합니다. `useMemo`는 원래 **계산된 값**을 반환하는 데 목적이 있지만, `useCallback`은 이 계산된 값이 **함수 참조**가 되도록 응용하여 메모이제이션을 실현합니다.
+
+**동작 원리 정리**
+
+- React는 `useCallback` 내부의 함수를 캐시에 저장하고, 의존성 배열을 확인하여 해당 함수가 필요할 때 **이전 함수를 재사용**합니다.
+- 의존성이 변경되지 않으면 기존 함수를 재사용하고, 변경되면 새로운 함수를 생성합니다.
+
+### React.memo : 컴포넌트 메모이제이션
+
+`React.memo`는 컴포넌트의 불필요한 렌더링을 방지하기 위해 사용되는 고차 컴포넌트(Higher Order Component, HOC)입니다. `React.memo`는 **컴포넌트를 메모이제이션**하여, 해당 컴포넌트의 `props`가 변경되지 않는 한 **재렌더링을 하지 않도록** 합니다. `React.memo`로 감싸진 컴포넌트는 이전 `props`와 새로운 `props`를 비교하여 동일한 경우 컴포넌트를 재사용합니다.
+
+```jsx
+const MyComponent = React.memo(Component, [areEqual]);
+```
+
+**React.memo 내부 구현 코드**
+
+React 내부에서 `React.memo`의 실제 구현 코드는 더 복잡합니다.
+
+```jsx
+function memo(type, compare) {
+  const elementType = {
+    $$typeof: REACT_MEMO_TYPE,
+    type,
+    compare: compare === undefined ? null : compare,
+  };
+  return elementType;
+}
+```
+
+- `$$typeof`: React 내부에서 사용하는 **고유한 식별자**로, 이 경우 `REACT_MEMO_TYPE`을 사용하여 메모이제이션된 컴포넌트를 구분합니다.
+- `type`: 실제 렌더링할 원래 컴포넌트입니다.
+- `compare`: props 비교 함수로, 주어지지 않으면 기본적으로 `null`입니다.
+
+이렇게 반환된 `elementType`은 React의 **Reconciler(재조정자)** 에서 처리됩니다. `memo`를 사용한 컴포넌트는 React가 내부적으로 props 비교를 수행하여 렌더링 최적화를 합니다.
+
+**동작 원리 정리**
+
+- `React.memo`는 기본적으로 얕은 비교(Shallow Comparison)를 통해 **이전 `props`와 새로운 `props`가 같은지**를 판단합니다.
+- 두 객체가 같다면 재렌더링을 하지 않고 이전 컴포넌트를 그대로 사용합니다.
+- 다르면 컴포넌트를 다시 렌더링합니다.
+
+<br/>
+
+## 8. React에서 상태관리 라이브러리가 왜 필요할까?
+
+  React는 기본적으로 **컴포넌트 단위**로 상태를 관리합니다. 하지만 프로젝트 규모가 커지거나 복잡도가 증가하면서 React의 기본 상태 관리만으로는 한계에 부딪히게 됩니다.
+
+### 1 ) **다수의 컴포넌트 간 상태 공유**
+
+- 서로 다른 컴포넌트들이 **동일한 상태**를 필요로 하는 경우, 해당 상태를 최상위 부모 컴포넌트로 끌어올려야 합니다(Prop Drilling).
+- 예를 들어, `Navbar`, `Sidebar`, `Content`가 모두 **로그인 상태**를 알아야 한다면, 이를 최상위 컴포넌트에서 관리하고 **props로 전달**해야 합니다.
+- 이 경우, 상태를 **중간 컴포넌트**를 거쳐 전달해야 하는 문제가 발생할 수 있습니다.
+
+### 2 ) **Prop Drilling 문제**
+
+- 특정 상태를 자식 컴포넌트로 전달하기 위해 불필요하게 여러 단계의 컴포넌트에 **props**를 넘겨줘야 하는 상황입니다.
+- 이로 인해 코드가 지저분해지고, 컴포넌트 간의 **결합도**가 높아집니다.
+
+### 3 ) **전역 상태(Global State)의 필요성**
+
+- 다수의 페이지 또는 모듈에서 **공통으로 접근해야 하는 상태**가 있는 경우(예: 사용자 인증 정보, 테마 설정 등).
+- 전역 상태를 쉽게 관리하지 않으면 코드가 복잡해지고 오류가 발생하기 쉽습니다.
+
+### 4 ) **복잡한 비동기 로직**
+
+- `useEffect`와 같은 React 훅을 사용하여 **API 호출**이나 **비동기 작업**을 관리할 수 있지만, 상태와 관련된 여러 비동기 로직이 복잡하게 얽히면 관리하기 어려워집니다.
+- 예를 들어, 여러 API 요청의 상태(로딩, 성공, 실패 등)를 개별적으로 관리하는 것은 까다롭습니다.
+
+### 💡 언제 상태 관리 라이브러리를 도입해야 하는가?
+
+무조건 상태 관리 라이브러리를 도입하는 것은 좋지 않습니다. 오히려 상태 관리의 복잡성 증대, 성능 저하, 유지 보수 어려움 등의 문제를 초래할 수 있습니다. 복잡하지 않은 프로젝트인 경우 React에서 기본적으로 제공하는 상태관리 도구 useState, useReducer, contextAPI 등을 사용하는 것이 좋습니다.
+
+상태 관리 라이브러리는 아래와 같은 상황에서 도입하는것이 좋습니다:
+
+- **컴포넌트 간 상태 공유**가 빈번한 경우
+- **전역 상태**(예: 사용자 정보, 테마 설정)가 필요할 때
+- **비동기 데이터 페칭**과 상태 관리가 복잡할 때
+- Prop Drilling 문제가 코드의 가독성을 떨어뜨릴 때
+
+상태 관리 라이브러리를 도입할 때는 정말 필요한 라이브러리인지 아님 React에서 제공하는 상태 관리 도구를 통해 충분히 해결 가능한지 생각해보는 것이 중요합니다.
+
+<br/>
+
+## 9. React Hooks의 기본 동작원리는 무엇일까?
+
+React Hooks는 React 내부에서 **클로저(closure)** 와 **배열**을 사용하여 상태와 함수 호출을 관리합니다. Hooks는 함수형 컴포넌트가 렌더링될 때마다 **순차적으로 호출**되며, React는 이를 통해 각 컴포넌트의 상태를 추적합니다.
+
+### 기본 개념
+
+- React는 **각 컴포넌트마다 고유한 메모리 공간**을 사용하여 상태를 저장합니다.
+- `useState`나 `useEffect` 같은 Hook은 **렌더링 순서**에 따라 호출되므로, React는 호출된 순서대로 상태를 추적하고 관리합니다.
+- Hook의 호출 순서가 바뀌지 않는다는 전제하에, React는 **Hook이 호출된 순서대로 상태를 매핑**합니다.
+
+**React Hooks 일부 소스 코드** 
+
+```jsx
+export function useState<S>(
+  initialState: (() => S) | S, // 초기 상태값 타입 콜백 함수 방식과 일반 방식 두가지.
+): [S, Dispatch<BasicStateAction<S>>] { 
+// 반환하는 타입 S는 상태 Dispatch<action<상태>>는 setState
+  const dispatcher = resolveDispatcher(); // dispatcher라는 resolveDispatcher 함수 반환값을 받고
+  return dispatcher.useState(initialState); // 거기서 useState라는 메서드(함수를 실행해서 상태를 넣어준다.)
+}
+export function useReducer<S, I, A>(
+  reducer: (S, A) => S,
+  initialArg: I,
+  init?: I => S,
+): [S, Dispatch<A>] {
+  const dispatcher = resolveDispatcher();
+  return dispatcher.useReducer(reducer, initialArg, init);
+}
+
+export function useRef<T>(initialValue: T): {|current: T|} {
+  const dispatcher = resolveDispatcher();
+  return dispatcher.useRef(initialValue);
+}
+
+export function useEffect(
+  create: () => (() => void) | void,
+  deps: Array<mixed> | void | null,
+): void {
+  const dispatcher = resolveDispatcher();
+  return dispatcher.useEffect(create, deps);
+}
+
+export function useInsertionEffect(
+  create: () => (() => void) | void,
+  deps: Array<mixed> | void | null,
+): void {
+  const dispatcher = resolveDispatcher();
+  return dispatcher.useInsertionEffect(create, deps);
+}
+
+export function useLayoutEffect(
+  create: () => (() => void) | void,
+  deps: Array<mixed> | void | null,
+): void {
+  const dispatcher = resolveDispatcher();
+  return dispatcher.useLayoutEffect(create, deps);
+}
+...Hooks 생략...
+
+// resolveDispatcher와 Hooks의 상태에 대한 코드 역시 같은 파일내에 존재한다.
+import ReactCurrentDispatcher from './ReactCurrentDispatcher';
+// 액션 함수 type과 Dispatch 타입
+type BasicStateAction<S> = (S => S) | S;
+type Dispatch<A> = A => void;
+
+function resolveDispatcher() {// Hooks에서 호출하는 함수 코드.
+  const dispatcher = ReactCurrentDispatcher.current; // ReactCurrentDispatcher의 current를 본다.
+  if (__DEV__) { // 리액트의 경우 개발모드에서만 에러를 출력하고 프로덕트에서 최적화 하는 부분이 존재한다.
+    if (dispatcher === null) { // 잘못된 호출에 대한 에러 출력.
+      console.error(
+        'Invalid hook call. Hooks can only be called inside of the body of a function component. This could happen for' +
+          ' one of the following reasons:\n' +
+          '1. You might have mismatching versions of React and the renderer (such as React DOM)\n' +
+          '2. You might be breaking the Rules of Hooks\n' +
+          '3. You might have more than one copy of React in the same app\n' +
+          'See https://reactjs.org/link/invalid-hook-call for tips about how to debug and fix this problem.',
+      );
+    }
+  }
+  // Will result in a null access error if accessed outside render phase. We
+  // intentionally don't throw our own error because this is in a hot path.
+  // Also helps ensure this is inlined.
+  return ((dispatcher: any): Dispatcher);
+}
+```
+
+### React Hooks의 관리 구조
+
+- **Hook State**: 각 컴포넌트마다 **Hook 상태 배열**이 생성됩니다.
+- **렌더링 사이클**: 컴포넌트가 렌더링될 때마다 `useState`, `useEffect` 등 모든 Hook이 **순서대로 호출**됩니다.
+- **Hook Index**: React는 현재 컴포넌트 내에서 **몇 번째 Hook이 호출되었는지 추적**합니다.
+
+<br/>
+
+## 10. React가 어떻게 SPA를 구현할까?
+
+리액트에서 SPA를 구현할 때는 **클라이언트 측 라우팅(Client-side Routing)**을 사용합니다. 보통 웹 애플리케이션에서는 URL이 변경될 때마다 서버로 요청을 보내 페이지를 새로 로드하지만, 리액트에서는 `react-router` 같은 라우팅 라이브러리를 활용하여 클라이언트 측에서 라우팅을 처리합니다.
+
+- `react-router`는 페이지 전환이 필요할 때 브라우저의 `history API`를 이용하여 URL을 변경하지만 실제로 서버에 요청을 보내지 않습니다.
+- 이를 통해 URL은 변경되지만 페이지 전체가 새로 고쳐지지 않으며, 오직 필요한 컴포넌트만 교체되거나 업데이트됩니다.
+
+### React Router의 동작 원리
+
+React Router는 브라우저의 **History API**(`pushState`, `replaceState`, `popstate` 이벤트 등)를 사용하여 **URL을 변경**합니다. 이렇게 변경된 URL을 감지하고, 해당 URL에 맞는 컴포넌트를 **클라이언트 사이드에서 렌더링**합니다.
+
+**동작 과정**
+
+- **초기 설정**: 애플리케이션을 `<BrowserRouter>`로 감싸면 React Router는 **히스토리 객체**를 생성하고 URL을 추적합니다.
+- **라우팅 구성**: `<Routes>` 컴포넌트 내에 여러 개의 `<Route>`를 정의하여 **경로별 컴포넌트**를 지정합니다.
+- **URL 변경 감지**: `<Link>`나 `useNavigate`를 통해 URL이 변경되면, React Router는 **전체 페이지를 다시 로드하지 않고** 컴포넌트를 교체합니다.
+- **렌더링**: 변경된 URL에 따라 **일치하는 경로의 컴포넌트**를 렌더링합니다.
+
+### React Router의 내부 동작 코드
+
+실제 React Router는 더 복잡한 최적화 및 다양한 기능이 포함되어 있지만, 여기서는 기본적인 작동 방식을 설명합니다.
+
+**`BrowserRouter` 구현 예시**
+`BrowserRouter`는 HTML5 **History API**를 사용하여 브라우저의 URL을 제어합니다. 사용자가 브라우저의 뒤로 가기 버튼을 클릭하거나 `navigate` 함수를 통해 경로를 변경할 때, `location` 상태를 업데이트하여 해당 경로에 맞는 컴포넌트를 렌더링합니다.
+
+```jsx
+import { useState, useEffect, createContext, useContext } from 'react';
+
+// Router Context 생성 (다른 컴포넌트에서 라우터 상태를 접근할 수 있게 함)
+const RouterContext = createContext();
+
+// BrowserRouter 컴포넌트
+export function BrowserRouter({ children }) {
+  // 현재 경로를 저장하는 상태값
+  const [location, setLocation] = useState(window.location.pathname);
+
+  // 브라우저의 뒤로 가기/앞으로 가기 등의 이벤트를 감지하여 경로 변경
+  useEffect(() => {
+    const handlePopState = () => setLocation(window.location.pathname);
+    window.addEventListener('popstate', handlePopState);
+    
+    // 컴포넌트가 언마운트될 때 이벤트 제거
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // navigate 함수: 브라우저의 URL을 변경하고 상태 업데이트
+  const navigate = (path) => {
+    window.history.pushState({}, '', path); // 브라우저의 주소창 URL 변경
+    setLocation(path); // 상태 업데이트로 컴포넌트 리렌더링 유도
+  };
+
+  // 자식 컴포넌트에서 라우팅 정보에 접근할 수 있도록 Context로 제공
+  return (
+    <RouterContext.Provider value={{ location, navigate }}>
+      {children}
+    </RouterContext.Provider>
+  );
+}
+
+// 현재 경로를 반환하는 Hook
+export const useLocation = () => useContext(RouterContext).location;
+
+// 경로를 변경하는 Hook
+export const useNavigate = () => useContext(RouterContext).navigate;
+```
+
+- **`useState`로 `location` 관리**
+    - 현재 URL 경로(`window.location.pathname`)를 상태로 관리합니다.
+    - URL이 변경되면 `location` 상태가 업데이트됩니다.
+- **`useEffect`로 URL 변경 감지**
+    - `popstate` 이벤트를 사용하여 브라우저의 뒤로 가기/앞으로 가기 시 URL 변경을 감지합니다.
+    - URL이 변경되면 `setLocation`을 호출하여 경로를 갱신합니다.
+- **`navigate` 함수**
+    - `window.history.pushState()`를 사용하여 브라우저의 URL을 변경합니다.
+    - 페이지 전체를 새로고침하지 않고 경로만 변경합니다.
+- **Context API 활용**
+    - `RouterContext`를 사용하여 **라우팅 상태**(`location`, `navigate`)를 하위 컴포넌트에서 접근할 수 있도록 합니다.
+    
+
+**`Routes`와 `Route` 구현 예시**
+
+**`Routes`** 컴포넌트는 현재 경로에 맞는 **자식 컴포넌트**를 렌더링하는 역할을 합니다. **`Route`** 컴포넌트는 특정 경로(`path`)에 대해 렌더링할 컴포넌트를 정의합니다.
+
+```jsx
+export function Routes({ children }) {
+  const location = useLocation(); // 현재 경로 가져오기
+  let element = null;
+
+  // 자식 컴포넌트들(`Route`)을 순회하면서 현재 경로와 일치하는 컴포넌트를 찾음
+  children.forEach((child) => {
+    if (child.props.path === location) {
+      element = child;
+    }
+  });
+
+  return element; // 일치하는 경로가 없으면 null 반환
+}
+
+export function Route({ path, element }) {
+  return element; // 일치하는 경로의 컴포넌트 렌더링
+}
+```
+
+- **`useLocation`으로 현재 경로 가져오기**
+    - `useLocation` 훅을 사용하여 현재 브라우저의 경로를 가져옵니다.
+- **`children.forEach`를 통해 경로 매칭**
+    - `<Routes>`의 자식 요소로 전달된 모든 `<Route>` 컴포넌트를 순회합니다.
+    - 현재 경로(`location`)와 `<Route>`의 `path` 속성이 일치하는지 확인합니다.
+- **매칭된 컴포넌트 렌더링**
+    - 현재 경로와 일치하는 `<Route>` 컴포넌트를 찾으면 해당 컴포넌트를 렌더링합니다.
+    - 일치하는 컴포넌트가 없으면 `null`을 반환합니다.
+
+**`Link` 구현 예시**
+
+**`Link`** 컴포넌트는 클릭 시 브라우저의 URL을 변경하고, **페이지 새로고침 없이** 해당 경로에 맞는 컴포넌트를 렌더링합니다.
+
+```jsx
+export function Link({ to, children }) {
+  const navigate = useNavigate();
+
+  const handleClick = (event) => {
+    event.preventDefault();
+    navigate(to);
+  };
+
+  return <a href={to} onClick={handleClick}>{children}</a>;
+}
+```
+
+- **`useNavigate` 훅 사용**
+    - `useNavigate` 훅을 사용하여 URL을 변경하는 `navigate` 함수를 가져옵니다.
+- **`handleClick` 이벤트**
+    - `event.preventDefault()`를 사용하여 `<a>` 태그의 기본 동작(페이지 새로고침)을 방지합니다.
+    - `navigate(to)`를 호출하여 지정된 경로로 URL을 변경합니다.
+- **클라이언트 사이드 네비게이션**
+    - 이 방식으로 페이지 전체를 다시 로드하지 않고 URL만 변경하여 **SPA처럼 동작**하도록 만듭니다.
