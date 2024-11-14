@@ -23,6 +23,16 @@ React 공식 문서를 살펴보면서 기존에 이해하였던 내용을 더 �
 
 - [10. React가 어떻게 SPA를 구현할까?](#10-react가-어떻게-spa를-구현할까)
 
+- [11. React SSR은 어떻게 동작할까?](#11-react-ssr은-어떻게-동작할까)
+
+- [12. React Hydration은 어떻게 동작할까?](#12-react-hydration은-어떻게-동작할까)
+
+- [13. React 18의 동시성(Concurrency)이란?](#13-react-18의-동시성concurrency이란)
+
+- [14. React Server Components는 무엇일까?](#14-react-server-components는-무엇일까)
+
+- [15. React Server Actions은 무엇일까?](#15-react-server-actions은-무엇일까)
+
 <br/>
 
 ## 1. JSX가 어떻게 컴파일 될까?
@@ -958,3 +968,702 @@ export function Link({ to, children }) {
     - `navigate(to)`를 호출하여 지정된 경로로 URL을 변경합니다.
 - **클라이언트 사이드 네비게이션**
     - 이 방식으로 페이지 전체를 다시 로드하지 않고 URL만 변경하여 **SPA처럼 동작**하도록 만듭니다.
+
+<br/>
+
+## 11. React SSR은 어떻게 동작할까?
+
+React에서 SSR(Server-Side Rendering)은 클라이언트 측에서 JavaScript로 컴포넌트를 렌더링하기 전에 **서버에서 HTML을 생성**하여 클라이언트에 전달하는 방식입니다. 이를 통해 초기 페이지 로딩 속도를 높이고, SEO(Search Engine Optimization)를 개선하며, 느린 네트워크 환경에서 사용자 경험을 개선할 수 있습니다.
+
+### SSR의 기본 동작 방식
+
+- **서버에서 React 컴포넌트를 HTML로 렌더링**
+    - 서버는 React 컴포넌트를 실행하여, 초기 상태를 기반으로 HTML을 생성합니다.
+    - 이 과정에서 `ReactDOMServer`의 `renderToString` 또는 `renderToStaticMarkup` 메서드를 사용하여 **React 컴포넌트를 HTML 문자열로 변환**합니다.
+- **클라이언트로 HTML 전달**
+    - 생성된 HTML은 HTTP 응답으로 클라이언트에 전달됩니다. 브라우저는 전달받은 HTML을 렌더링하여, 사용자가 페이지의 초기 콘텐츠를 빠르게 볼 수 있도록 합니다.
+- **클라이언트 측에서 React 하이드레이션(hydration) 진행**
+    - HTML이 렌더링된 후, 클라이언트 측에서는 React가 다시 초기화됩니다. 이 과정에서 React는 브라우저에 이미 렌더링된 HTML을 재사용하여, 필요한 이벤트 바인딩이나 추가적인 JavaScript 기능을 활성화하는 **하이드레이션(hydration)**을 진행합니다.
+    - React의 `ReactDOM.hydrate` 메서드는 클라이언트 측에서 HTML과 React 상태를 병합하며, 이로써 클라이언트 측에서 전체 페이지가 다시 렌더링되지 않도록 합니다.
+
+### SSR 내부 동작 원리
+
+React의 SSR은 기본적으로 `ReactDOMServer` 패키지의 메서드를 사용하여 수행됩니다. 이를 통해, 서버 측에서 렌더링된 HTML을 클라이언트로 전달하게 됩니다.
+
+**주요 메서드**
+
+- **`renderToString`**
+    - 이 메서드는 React 컴포넌트를 문자열 형태의 HTML로 렌더링합니다.
+    - 이 HTML은 인터랙티브 기능 없이 순수한 HTML만 포함하며, 클라이언트가 이를 받아서 초기 렌더링이 완료된 페이지를 볼 수 있게 됩니다.
+- **`renderToStaticMarkup`**
+    - `renderToStaticMarkup`은 `renderToString`과 비슷하지만, 데이터 속성이나 React 내부 참조가 포함되지 않은 정적 HTML만을 생성합니다. 따라서, 주로 SEO용 HTML 생성에 사용됩니다.
+
+### Universal Rendering (CSR + SSR)
+
+현재 프론트엔드에서 사용하는 SSR은 자세히 본다면 **Universal Rendering**이라고 불러야합니다.
+
+**SSR과 CSR을 혼합한 방식**이기 때문입니다. 
+
+![1_w8g7dfvbKSbG6MxTLfNTjQ.webp](https://velog.velcdn.com/images/njt6419/post/2fe405ae-a14f-4882-829e-5e01023ca32d/image.webp)
+
+**Universal Rendering** 에서는 최초 렌더링(SSR)에 필요한 `node/` 파일과 이후 CSR에 필요한 `web/` 파일 2가지 결과물이 필요합니다. 즉, 기존 코드에서 `node/` 파일을 새로 만들어줘야 한다는 뜻입니다.
+
+<br/>
+
+## 12. React Hydration은 어떻게 동작할까?
+
+react-dom/server를 통해 사전에 만들어진 HTML로 그려진 브라우저 DOM 노드 내부에 React 컴포넌트를 렌더링합니다.
+
+`ReactDom.hydrateRoot()`는 Hydration 과정의 시작점이되며, 아래와 같은 과정으로 진행됩니다:
+
+- 서버에서 렌더링된 HTML의 루트 요소를 탐색합니다.
+- React 컴포넌트 트리를 생성하고, 기존 HTML 구조와 매칭시킵니다.
+- 각 컴포넌트에 대한 이벤트 리스너를 연결하고 상태를 초기합니다.
+- 불일치가 발생되면 경고를 발생시키고, 필요한 경우  DOM를 업데이트합니다.
+
+새로운 DOM 트리를 만드는 프로세스와 서버에서 렌더링된 HTML이 있기 때문에 커서를 통해 비교하여 새 노드를 생성하거나 재사용합니다. 기존 DOM 트리에 커서를 두며, 새로운 DOM 노드를 만들어야 할 때 이 커서와 비교합니다. 비교 결과가 일치하면 새 노드를 만들지 않고, 기존 노드를 그대로 사용합니다. 재사용된 노드는  React Fiber 노드의 stateNode로 설정됩니다.
+
+React Fiber Tree의 각 노드는 `beginWork()`, `completeWork()` 두 번 순회되기 때문에 기존 DOM 트리의 커서도 이에 맞춰 동기화해줘야합니다.
+
+### beginWork()에서의 Hydration 과정
+
+```jsx
+function beginWork(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  renderLanes: Lanes,
+): Fiber | null {
+  ...
+  switch (workInProgress.tag) {
+    case HostComponent:
+      return updateHostComponent(current, workInProgress, renderLanes);
+  }
+  ...
+}
+  
+function updateHostComponent(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  renderLanes: Lanes
+) {
+  pushHostContext(workInProgress);
+  if (current === null) {
+    tryToClaimNextHydratableInstance(workInProgress);
+  }
+  ....
+  return workInProgress.child;
+}
+```
+
+HostComponent는 `<div>`, `<span>` 등 브라우저 네이티브 DOM요소를 나타냅니다.
+
+`tryToClaimNextHydratableInstance()` 함수는 서버에서 미리 렌더링된 HTML 페이지에 이미 존재하는 DOM 요소를 재사용하려고 시도하는 함수입니다.
+
+```jsx
+function tryToClaimNextHydratableInstance(fiber: Fiber): void {
+  if (!isHydrating) { // Hydration 중이 아니라면 return
+    return;
+  }
+
+  // 현재 렌더링 환경에 대한 정보를 가져온다.
+  const currentHostContext = getHostContext();
+  // 현재 Fiber 노드가 Hydration에 적합한지 검사
+  const shouldKeepWarning = validateHydratableInstance(
+    fiber.type,
+    fiber.pendingProps,
+    currentHostContext,
+  );
+
+  // 다음 Hydration 대상 DOM 요소를 가져온다.
+  // 이 요소를 현재 Fiber 노드와 연결하려고 시도한다.
+  const nextInstance = nextHydratableInstance;
+
+  // 더 이상 Hydrate 할 노드가 없거나 Hydration이 불가능한 경우 
+  if (
+    !nextInstance ||
+    !tryHydrateInstance(fiber, nextInstance, currentHostContext)
+  ) {
+    if (shouldKeepWarning) { // Hydration이 실패했고, 경고를 유지하는 경우
+      warnNonHydratedInstance(fiber, nextInstance); // Hydration 실패에 대한 경고 발생
+    }
+    throwOnHydrationMismatch(fiber); // Hydarion 불일치가 발생했을 때 오류 발생
+  }
+}
+
+function tryHydrateInstance(
+  fiber: Fiber,
+  nextInstance: any,
+  hostContext: HostContext,
+) {
+  // DOM 요소가 현재 Fiber 노드와 일치하여 Hydration이 가능한지 확인한다.
+  const instance = canHydrateInstance(
+    nextInstance,
+    fiber.type,
+    fiber.pendingProps,
+    rootOrSingletonContext,
+  );
+    
+  if (instance !== null) { // 가능하다면 DOM 요소를 Fiber 노드의 stateNode로 설정
+    fiber.stateNode = (instance: Instance);
+    // 현재 Fiber를 Hydration 부모로 설정
+    // 다음 Hydration 대상을 현재 요소의 첫 번째 자식으로 설정(기존 DOM의 커서가 자식으로 이동)
+    // rootOrSingletonContext 플래그를 false로 설정
+    hydrationParentFiber = fiber;
+    nextHydratableInstance = getFirstHydratableChild(instance);
+    rootOrSingletonContext = false;
+    return true; // 성공
+  }
+    
+  return false; // 실패
+}
+```
+
+### completeWork()에서의 Hydration 과정
+
+```jsx
+function completeWork(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  renderLanes: Lanes,): Fiber | null {
+   switch (workInProgress.tag) {
+    case HostComponent: {
+      ...
+      if (current !== null && workInProgress.stateNode != null) {
+       ... // 기존 노드 업데이트 로직
+      } else {
+        ... // 새 노드 생성 로직
+
+        // 이 노드가 Hydration 과정을 거쳤는지 확인
+        const wasHydrated = popHydrationState(workInProgress);
+        if (wasHydrated) {
+            prepareToHydrateHostInstance(workInProgress, currentHostContext);
+        } else { // Hydration 되지 않은 경우
+          const rootContainerInstance = getRootHostContainer();
+
+          // 새로운 DOM 인스턴스 생성, 자식들을 추가, stateNode 설정
+          const instance = createInstance(
+            type,
+            newProps,
+            rootContainerInstance,
+            currentHostContext,
+            workInProgress,
+          );
+          appendAllChildren(instance, workInProgress, false, false);
+          workInProgress.stateNode = instance;
+        }
+      }
+      return null;
+    }
+   }
+  ...
+}
+```
+
+Fiber 노드가 성공적으로 **Hydration** 되면 `prepareToHydrateHostInstance()` 함수를 호출합니다.
+
+Hydration이 되지 않은 경우 React는 새로운 DOM Instance를 생성하고 자식 노드들을 추가한 후, 이를 Fiber 노드의 stateNode에 설정합니다.
+
+이 과정은 렌더링 단계의 일부로, 실제 DOM 업데이트는 이후의 커밋 단계에서 이루어집니다.
+
+여기서 `prepareToHydrateHostInstance()` 함수의 역할은 아래와 같습니다.
+
+```jsx
+function prepareToHydrateHostInstance(
+  fiber: Fiber,
+  hostContext: HostContext,
+): void {
+  if (!supportsHydration) { // 현재 환경이 Hydration을 지원하는지 확인
+    throw new Error(
+      'Expected prepareToHydrateHostInstance() to never be called. ' +
+        'This error is likely caused by a bug in React. Please file an issue.',
+    );
+  }
+
+  // Fiber 노드에 연결된 실제 DOM 요소를 가져온다.
+  const instance: Instance = fiber.stateNode;
+  // 실제 Hydration 작업 수행(DOM 요소의 속성 업데이트, 이벤트 리스너 연결 등)
+  const didHydrate = hydrateInstance(
+    instance,
+    fiber.type,
+    fiber.memoizedProps,
+    hostContext,
+    fiber,
+  );
+
+  // Hydration이 실패하고, 안전성을 성능보다 우선시하는 설정이 켜져있다면 에러를 발생시킨다.
+  if (!didHydrate && favorSafetyOverHydrationPerf) {
+    throwOnHydrationMismatch(fiber);
+  }
+}
+```
+
+[`hydrateInstance()` 내부](https://github.com/facebook/react/blob/main/packages/react-dom-bindings/src/client/ReactFiberConfigDOM.js#L1401)에서 [`hydrateProperties()`](https://github.com/facebook/react/blob/main/packages/react-dom-bindings/src/client/ReactDOMComponent.js#L2909)를 호출하여 Hydration 과정을 수행합니다.
+
+**`prepareToHydrateHostInstance()`는 실제 Hydration을 수행하는 함수입니다.**
+
+### 서버 렌더링 트리와 클라이언트 생성 트리 동기화 과정
+
+```jsx
+function popHydrationState(fiber: Fiber): boolean {
+  if (!supportsHydration) { // Hydration을 지원하지 않는 경우
+    return false;
+  }
+
+  if (fiber !== hydrationParentFiber) { // 현재 Fiber가 Hydarion의 부모가 아닌 경우
+    return false;
+  }
+
+  if (!isHydrating) { // 현재 Hydration 중이 아니면
+    popToNextHostParent(fiber); // 다음 호스트 부모로 이동
+    isHydrating = true; // Hydration 상태 true 설정
+    return false; // false return
+  }
+
+  // 노드 정리 여부 결정
+  let shouldClear = false;
+  if (supportsSingletons) { // 싱글톤 지원 여부
+    if (
+      fiber.tag !== HostRoot &&
+      fiber.tag !== HostSingleton &&
+      !(
+        fiber.tag === HostComponent &&
+        (!shouldDeleteUnhydratedTailInstances(fiber.type) ||
+          shouldSetTextContent(fiber.type, fiber.memoizedProps))
+      )
+    ) {
+      shouldClear = true;
+    }
+  } else { // 싱글톤 지원 X
+    if (
+      fiber.tag !== HostRoot &&
+      (fiber.tag !== HostComponent ||
+        (shouldDeleteUnhydratedTailInstances(fiber.type) &&
+          !shouldSetTextContent(fiber.type, fiber.memoizedProps)))
+    ) {
+      shouldClear = true;
+    }
+  }
+
+  // 노드 정리 실행
+  if (shouldClear) {
+    const nextInstance = nextHydratableInstance;
+    if (nextInstance) {
+      warnIfUnhydratedTailNodes(fiber);
+      throwOnHydrationMismatch(fiber);
+    }
+  }
+
+  // Hydration 컨텍스트 업데이트
+  popToNextHostParent(fiber); // 다음 호스트 부모로 이동
+  if (fiber.tag === SuspenseComponent) { // Suspense 처리
+    nextHydratableInstance = skipPastDehydratedSuspenseInstance(fiber);
+  } else { // 다음 Hydartion 대상 설정
+    nextHydratableInstance = hydrationParentFiber
+      ? getNextHydratableSibling(fiber.stateNode)
+      : null;
+  }
+  return true;
+}
+```
+
+`popHydrationState()` 함수는 각 Fiber 노드에 대해 Hydration 상태를 관리하고, 필요한 경우 정리 작업을 수행하며, Hydration 과정에서 발생할 수 있는 불일치를 감지하고 처리합니다. 이를 통해 서버에서 렌더링된 콘텐츠와 클라이언트에서 생성되는 React 트리를 효과적으로 동기화합니다.
+
+`popToNextHostParent()` 함수는 React의 컴포넌트 트리 현재 위치에서 위로 올라가면 가장 가까운 실제 DOM 요소와 연관된 컴포넌트를 찾습니다. Hydration 과정에서 현재 처리 중인 컴포넌트의 가장 가까운 DOM 관련 부모를 찾아주는 역할을 합니다.
+
+<br/>
+
+## 13. React 18의 동시성(Concurrency)이란?
+
+동시성은 **여러 작업을 순차적이면서도 중단 없이 수행할 수 있도록 스케줄링하는 방식**입니다. CPU가 여러 작업을 동시에 실행하는 것처럼 보이도록 빠르게 전환하면서 처리합니다. 이는 주로 **멀티태스킹** 또는 **비동기 작업**을 통해 이루어지며, 웹 애플리케이션에서는 자바스크립트의 `async`/`await`나 `Promise`와 같은 비동기 처리가 동시성을 구현하는 방식에 해당합니다.
+동시성은 동시에 실행되는 것처럼 보이지만 실제로는 단일 코어에서 작업이 빠르게 번갈아 가며 수행됩니다.예를 들어 비동기적으로 API 요청을 보내고, 데이터 응답이 올 때까지 기다리지 않고 다른 작업을 수행합니다.
+
+<div align="center">
+  <img src="https://martin-thoma.com/images/2021/05/parallel-interleaved.png" width="800" />
+  <p>[출처] : https://martin-thoma.com/synchronous-asynchronous-concurrent-parallel/</p>
+</div>
+
+위 이미지는 각각 순차 실행, 교차 실행, 병렬 실행 동작을 나타냅니다.
+
+### React에서의 동시성(Concurrency)
+
+React에서의 **동시성(concurrency)** 는 **사용자 경험을 개선하기 위해 여러 작업을 효율적으로 처리할 수 있도록 돕는 기능입니다.** React 18에서 **동시성 모드(Concurrent Mode)** 가 도입되었습니다. 
+
+**우선순위 기반 작업 처리**
+
+- React는 작업을 **고우선순위 작업(예: 사용자 입력, 클릭 등)** 과 **저우선순위 작업(예: 데이터 로딩, 리렌더링 등)** 으로 나눕니다.
+- 이를 통해 사용자 입력에 즉각적으로 반응해야 하는 작업은 우선순위가 높은 작업으로 처리되고, 데이터 갱신과 같은 작업은 백그라운드에서 수행됩니다.
+
+**중단 가능한 렌더링(Interruptible Rendering)**
+
+- React 동시성 모드는 렌더링 중이라도 **더 중요한 작업이 발생하면 현재 렌더링 작업을 중단**하고, 이후에 다시 재개할 수 있습니다. 이를 통해 작업을 효율적으로 분배하고, 중요한 작업이 지연되지 않도록 보장합니다.
+
+**트랜지션 API (`startTransition`)**
+
+- React에서 트랜지션은 특정 상태 업데이트를 **저우선순위로 처리**하도록 명시하는 API입니다.
+- 예를 들어, 입력 필드에서 타이핑할 때 실시간 검색 결과를 보여주는 경우, 검색 결과는 사용자 입력보다 우선순위가 낮으므로 `startTransition`을 통해 백그라운드 작업으로 처리할 수 있습니다.
+
+**자동 배치(Automatic Batching)**
+
+- React 18에서는 비동기 작업에서의 여러 상태 업데이트를 자동으로 묶어 하나의 렌더링 사이클로 처리하는 자동 배치 기능이 도입되었습니다. 이를 통해 **불필요한 리렌더링이 줄어들어 성능이 개선**됩니다.
+
+### React에서 동시성을 도입한 이유?
+
+React에서 동시성이 도입된 이유는 **UI의 반응성을 높이고, 사용자가 느끼는 버벅임을 최소화**하기 위해서입니다. React 18 이전에는 한 번 렌더링이 시작되면 **중단하거나 우선순위를 조정할 수 없었기 때문에** 사용자 입력 등 중요한 상호작용이 무거운 작업에 의해 차단되는 문제가 있었습니다.
+
+아래 예제에서는 `input` 필드에 텍스트를 입력할 때마다 10,000개의 DOM 요소가 생성됩니다. 이로 인해 **입력하는 즉시 반응하지 못하고, 렌더링이 끝날 때까지 기다려야 하는 버벅임**이 발생합니다.
+
+```jsx
+import React, { useState } from 'react';
+
+function HeavyComponent() {
+  const [input, setInput] = useState('');
+  const handleInputChange = (event) => {
+    setInput(event.target.value);
+    createHeavyDOM();
+  };
+
+  const createHeavyDOM = () => {
+    const elements = [];
+    for (let i = 0; i < 10000; i++) {
+      elements.push(<div key={i}>Item {i}</div>);
+    }
+    return elements;
+  };
+
+  return (
+    <div>
+      <input type="text" value={input} onChange={handleInputChange} placeholder="Type something..." />
+      <div>{createHeavyDOM()}</div>
+    </div>
+  );
+}
+
+export default HeavyComponent;
+```
+
+이런 문제를 React 18에서는 `startTransition`을 통해 **저우선순위 작업을 트랜지션으로 처리**하여, 사용자 입력을 빠르게 반영하는 동시에 무거운 작업을 백그라운드에서 처리할 수 있습니다.
+
+```jsx
+import React, { useState, startTransition } from 'react';
+
+function HeavyComponent() {
+  const [input, setInput] = useState('');
+  const [elements, setElements] = useState([]);
+
+  const handleInputChange = (event) => {
+    setInput(event.target.value);
+
+    // 무거운 작업을 트랜지션으로 처리하여 우선순위 낮춤
+    startTransition(() => {
+      const newElements = [];
+      for (let i = 0; i < 10000; i++) {
+        newElements.push(<div key={i}>Item {i}</div>);
+      }
+      setElements(newElements);
+    });
+  };
+
+  return (
+    <div>
+      <input type="text" value={input} onChange={handleInputChange} placeholder="Type something..." />
+      <div>{elements}</div>
+    </div>
+  );
+}
+
+export default HeavyComponent;
+```
+
+- `startTransition`으로 무거운 작업을 트랜지션으로 설정하여 **우선순위가 낮은 작업으로 처리**합니다.
+- 사용자 입력은 **즉각적으로 반응**하며, 무거운 작업은 백그라운드에서 천천히 진행됩니다.
+
+### 스케줄러 (Scheduler)
+
+React 동시성 모드의 내부는 **스케줄러(Scheduler)** 라는 구성 요소를 통해 관리됩니다. 이 스케줄러는 작업의 우선순위를 설정하고, 중단 및 재개 기능을 담당합니다.
+
+React는 **각 작업을 스케줄러에 등록**하고, 스케줄러는 이를 **우선순위에 따라 실행하거나 대기** 상태로 둡니다. 스케줄러는 웹 브라우저의 `requestIdleCallback`과 `requestAnimationFrame` 같은 API를 이용해 적절한 타이밍에 작업을 실행할 수 있도록 합니다.
+
+```jsx
+
+// 스케줄러 예시 (단순화된 형태)
+const scheduleCallback = (callback, priority) => {
+  // 현재 우선순위를 평가하여 작업을 큐에 추가
+  taskQueue.push({ callback, priority });
+  performWork();
+};
+
+const performWork = () => {
+  while (taskQueue.length) {
+    const task = taskQueue.shift();
+    if (shouldYield()) {
+      requestIdleCallback(performWork);
+      break;
+    }
+    task.callback();
+  }
+};
+```
+
+- `scheduleCallback`: 새 작업이 들어오면 작업의 우선순위를 기반으로 큐에 추가합니다.
+- `performWork`: 큐에 있는 작업을 순차적으로 실행하고, 더 중요한 작업이 발생하면 중단합니다(`shouldYield` 함수로 중단 여부 확인).
+
+### 중단 가능한 렌더링 (Fiber 구조)
+
+React는 **Fiber 구조**를 통해 작업을 세분화하고 중단 가능한 상태로 관리합니다. Fiber는 각 작업 단위를 잘게 나눈 트리 구조로서, 작업을 중단하고 다시 시작할 수 있게 하는 React의 핵심 구조입니다.
+
+- Fiber 노드들은 각각의 렌더링 작업을 표현하는 단위로, 각 노드는 자식, 부모, 형제 노드를 가지고 있어 트리 탐색이 효율적으로 이루어집니다.
+- 렌더링이 중단될 때, Fiber 구조는 현재까지의 작업 상태를 보존하고, 이후에 다시 해당 지점부터 작업을 재개할 수 있습니다.
+
+React 동시성 모드는 스케줄러와 Fiber 구조를 통해 **작업을 세분화하고 우선순위를 동적으로 조절하여 UI 반응성을 높입니다**.
+
+### 병렬성(parallelism)과의 차이점은?
+
+병렬성은 **여러 작업을 실제로 동시에 처리**하는 개념으로, **여러 CPU 코어가 실제로 여러 작업을 동시에 실행**하는 것을 의미합니다
+
+병렬성을 통해 여러 CPU 코어가 각각의 작업을 동시에 수행하여 작업의 전체 수행 시간을 줄입니다.즉, 작업을 물리적으로 동시에 수행하여 **처리 속도를 높이는 것**입니다.
+예를 들어, 아래와 같은 곳에서 사용됩니다:
+
+- **멀티코어 CPU**에서 대용량 데이터 처리
+- **병렬 연산을 지원하는 머신러닝 모델 학습**
+- **대규모 이미지 처리**를 위한 그래픽 카드의 병렬 연산
+
+**동시성(concurrency)** 과 **병렬성(parallelism)** 은 여러 작업을 동시에 다루는 방식에서 큰 차이를 갖는 개념입니다. **동시성**은 여러 작업을 **번갈아가며 진행하여 동시에 처리되는 것처럼 보이게 만드는 방식**입니다. 이는 한 작업을 중단하고 다른 작업을 처리한 후 다시 돌아오는 식으로, 단일 CPU 코어에서 여러 작업을 효율적으로 처리하는 데 유용합니다. 
+
+반면, **병렬성**은 **여러 작업을 물리적으로 동시에 수행하는 방식**으로, 멀티코어 시스템에서 각각의 코어가 다른 작업을 동시에 처리하게 됩니다. 따라서 병렬성은 작업을 병렬로 나눠 속도를 높일 수 있지만, 동시성은 순차적으로 빠르게 전환하여 작업이 진행되도록 보이게 합니다. 예를 들어, 동시성은 한 사람이 번갈아 여러 가지 일을 처리하는 것과 비슷하고, 병렬성은 여러 사람이 각자 일을 동시에 처리하는 것과 유사합니다.
+
+<br/>
+
+## 14. React Server Components는 무엇일까?
+
+**서버 컴포넌트**는 React 18에서 도입된 새로운 개념으로, React 컴포넌트를 서버에서만 렌더링하고 클라이언트로는 그 결과만을 전달합니다. 클라이언트 컴포넌트와 달리 서버 컴포넌트는 클라이언트에 JavaScript 코드나 상태 관리를 전달하지 않고, HTML과 같은 최종 결과만 전달하므로 **클라이언트의 자원 소비를 최소화**할 수 있습니다.
+
+### React Server Components의 특징
+
+- **서버 렌더링**: RSC는 서버에서 컴포넌트를 렌더링한 후 HTML로 변환하여 클라이언트에 전달합니다. 이렇게 하면 클라이언트는 초기 JavaScript 번들을 많이 다운로드할 필요 없이 바로 HTML을 볼 수 있어 초기 로딩 속도가 빨라집니다.
+- **데이터 패칭 최적화**: 서버 컴포넌트는 서버에서 데이터 패칭과 렌더링을 동시에 처리하여 클라이언트로 전송하므로 클라이언트의 데이터 패칭 속도를 개선할 수 있습니다. 특히, 클라이언트 컴포넌트와 서버 컴포넌트를 자유롭게 조합할 수 있어 필요한 데이터만 효율적으로 패칭합니다.
+- **상태 및 이벤트 관리**: 서버 컴포넌트는 클라이언트 컴포넌트와 달리 직접적으로 상태나 이벤트 처리를 하지 않고, 필요한 데이터를 제공하는 데 초점을 둡니다. 클라이언트에서는 UI 상호작용만 처리하므로 복잡한 상태 관리를 단순화할 수 있습니다.
+
+### Client Component와 Server Component 차이점
+
+**Server Component**
+
+- Server Component는 서버에서 렌더링되어 완성된 HTML을 클라이언트에 전달합니다.
+- 초기 로딩 속도를 향상시키고 SEO에 유리합니다.
+- 서버에서 렌더링되기 때문에 클라이언트에 전달되는 JavaScript 번들의 크기를 줄일 수 있습니다.
+- 데이터 페칭이 서버에서 이루어지기 때문에 클라이언트에서 복잡한 데이터 페칭 로직을 구현할 필요가 없습니다. 서버에서 데이터베이스 쿼리나 API 호출을 수행하여 완성된 데이터를 클라이언트에 전달할 수 있습니다.
+- 상태 관리가 서버에서 이루어지므로 클라이언트 측의 상태 관리 복잡성이 줄어듭니다.
+- 서버 컴포넌트에서는 Browser API, Event Listener, React hook, class Component 등을 사용하지 못합니다.
+
+**Client Component**
+
+- Client Component는 클라이언트 측에서 JavaScript로 컴포넌트를 렌더링하고, 브라우저에서 실행됩니다.
+- 사용자 입력이나 이벤트 처리가 필요한 동적 인터랙션을 처리할 수 있습니다.
+- 클라이언트 측에서 상태를 관리하며, 상태 변화 처리가 가능합니다.
+- rowser API, Event Listener, React hook, class Component 등을 사용할 수 있습니다.
+- JavaScript 번들을 로드해야 하므로 초기 로딩 속도가 다소 느릴 수 있습니다.
+
+![sc_vs_cc)](https://github.com/user-attachments/assets/1f99b0d9-7ebb-47f4-827c-a599a1ce3265)
+[출처] : https://nextjs.org/docs/app/building-your-application/rendering/composition-patterns
+
+### React Server Component의 동작 방식
+
+아래와 같이 Server Component와 Client Component가 혼합된 컴포넌트가 있다고 가정합니다.
+
+<div align="center">
+  <img src="https://github.com/NamJongtae/nextjs-study/assets/113427991/a515a1dc-ae03-4365-9053-64ce0f107fa6" width="800" />
+</div>
+
+<br/>
+
+해당 페이지를 표시하기 위해 서버에 요청을 보냅니다. 서버는 이때 컴포넌트 트리를 root 부터 실행하며, **직렬화된 json**형태로 재구성하기 시작합니다.
+
+**💡 직렬화 ?**
+
+> 특정 개체를 다른 컴퓨터 환경으로 전송하고 재구성할 수 있는 형태로 바꾸는 과정
+
+모든 객체를 직렬화 할 수는 없으며, 대표적으로 function은 직렬화가 불가능한 객체입니다.
+함수의 실행 컨텍스트, 스코프, 클로저까지 직렬화할 수는 없기 때문에 function은 직렬화가 불가능한 객체가 되는 것입니다.
+
+직렬화 과정은 모든 서버 컴포넌트 실행하여 json 객체 형태의 트리로 재구성할 때까지 진행됩니다.
+예를 들어 아래와 같은 형식으로 재구성됩니다.
+
+<div align="center">
+  <img src="https://github.com/NamJongtae/nextjs-study/assets/113427991/b564fef8-5082-4b81-b444-767116fd3ed0" width="800" />
+</div>
+
+<br/>
+
+```jsx
+<div style={{backgroundColor:'green'}}>hello world</div> 
+
+> React.createElement(div,{style:{backgroundColor:'green'}},"hello world")
+
+> {
+  $$typeof: Symbol(react.element),
+  type: "div",
+  props: { style:{backgroundColor:"green"}, children:"hello world" },
+  ...
+} //이런 형태로 모든 컴포넌트를 순차적으로 실행
+
+```
+
+다만 이 과정을 모든 컴포넌트에 대하여 진행하는게 아니라, Client Component일 경우 건너뛰게 됩니다. 하지만 Client Component를 서버에서 해석하지 않고 건너 뛴다고해서 비워 둔다면 실제 컴포넌트 트리와 차이가 생기게 됩니다.
+
+따라서 Client Component의 경우 직접 해석하는 것이 아니라 `이곳은 Client Component가 렌더링되는 위치`라는 placeholder를 대신 배치해줍니다.
+
+```jsx
+{
+  $$typeof: Symbol(react.element),
+  type: {
+    $$typeof: Symbol(react.module.reference),
+    name: "default", //export default를 의미
+    filename: "./src/ClientComponent.js" //파일 경로
+  },
+  props: { children: "some children" },
+}
+
+```
+
+Client Component는 곧 함수이므로, 직렬화를 할 수 없습니다.
+따라서 함수를 직접 참조하는 것이 아니라 `module reference` 라고 하는 새로운 타입을 적용하고, 해당 컴포넌트의 경로를 명시함으로써 직렬화를 우회하고 있습니다.
+
+이러한 직렬화 작업을 마친 후 생성된 JSON tree를 도식화하면 다음과 같은 형태를 구성하게 됩니다.
+
+<div align="center">
+  <img src="https://github.com/NamJongtae/nextjs-study/assets/113427991/c93290a9-da02-431a-81e2-05ae8c252edc" width="800" />
+</div>
+
+<br/>
+
+이렇게 도출된 결과물을 Stream 형태로 클라이언트가 전달받게 되고,
+함께 다운로드한 js bundle을 참조하여, `module reference` 타입이 등장할 때마다 Client Component를 렌더링해서 빈 공간을 채워놓은 뒤, DOM에 반영하면 실제 화면에 스크린이 보여지게 되는 것입니다.
+
+### SSR vs Server Component
+
+**SSR**
+
+- SSR은 요청이 들어올 때마다 서버에서 React 컴포넌트를 렌더링하여 HTML을 생성합니다.
+- 클라이언트와 서버의 동기화를 위해 클라이언트 측에서 필요한 JavaScript 번들이 함께 제공되어 클라이언트 측에서 다시 한 번 React가 실행되는 **Hydreate** 과정이 필요합니다.
+- 초기 로딩 속도가 빠르지만, 클라이언트에서 추가적인 JavaScript 처리가 필요합니다.
+- getServerSideProps / getStaticProps 함수를 사용하여 data를 props로 넘겨주는 과정이 필요하며, 이로 인해 props drilling이 발생할 수 있습니다.
+
+**Server Component**
+
+- Server Component는 서버에서만 렌더링되어 클라이언트로 HTML을 전달합니다.
+- 클라이언트 측에서 추가적인 JavaScript 처리가 거의 필요하지 않습니다.
+- 렌더링된 HTML를 전달하기 때문에 **Hydreate** 과정이 필요하지 않습니다.
+- 클라이언트에 전달되는 데이터와 HTML이 더 적어, 클라이언트 성능이 더 향상됩니다.
+- 컴포넌트 내부에서 Data Fetch 할 수 있어, getServerSideProps / getStaticProps 함수를 사용하지 않아도 되며, props drilling을 방지할 수 있습니다.
+
+<br/>
+
+## 15. React Server Actions은 무엇일까?
+
+**React Server Actions**는 클라이언트와 서버 간의 통신을 단순화하여, 클라이언트에서 서버로 함수를 호출하는 것처럼 서버 액션을 실행하고 결과를 반영할 수 있게 해줍니다. 이로 인해 서버에서 처리해야 하는 로직(데이터베이스 업데이트, 외부 API 호출 등)을 클라이언트 코드에서 직접 다루는 것처럼 구현할 수 있어 개발자 경험이 크게 향상됩니다.
+
+### React Server Actions의 특징
+
+**서버에서 실행**
+
+- 서버 액션은 서버에서만 실행되며, 클라이언트에서는 이를 호출만 할 뿐, 실제 로직은 서버에서 처리됩니다.
+- 예를 들어, 데이터베이스에 저장하거나 외부 API를 호출하는 작업은 클라이언트가 직접 접근할 수 없기 때문에, 서버에서 수행되도록 하고 클라이언트는 결과만 받게 됩니다.
+
+**비동기 함수로 구현**
+
+- Server Action은 비동기 함수로 작성되며, 함수 실행이 완료되면 결과가 클라이언트로 전달됩니다. 클라이언트에서 서버 액션을 호출할 때, 일반적으로 `await` 키워드를 사용하여 비동기 작업의 결과를 기다릴 수 있습니다.
+
+**상태 업데이트와 일관성 유지**
+
+- 서버 액션의 결과를 클라이언트에서 즉시 반영하여, 필요한 경우 UI 상태를 자동으로 업데이트할 수 있습니다. 이로 인해 클라이언트와 서버 간의 데이터 일관성을 쉽게 유지할 수 있습니다.
+
+### React Server Actions 내부 동작 원리
+
+**React Server Actions**의 내부 동작 원리는 클라이언트에서 서버 액션을 호출할 때 마치 로컬 함수 호출처럼 간단하게 사용할 수 있도록 설계되었습니다. 먼저 서버 액션은 서버에서만 실행되는 함수로 정의됩니다. 클라이언트에서 이 액션을 호출하면 React는 내부적으로 이 호출을 처리하기 위해 HTTP 요청을 생성하여 서버로 전송합니다. 이 요청에는 실행할 함수 이름과 전달할 데이터가 포함되어 있어 서버에서 정확한 작업을 수행할 수 있도록 돕습니다.
+
+서버는 클라이언트로부터 받은 요청을 수신하고, 요청된 서버 액션을 실행합니다. 서버 액션은 주로 데이터베이스 접근이나 외부 API 호출 같은 서버 전용 작업을 포함하며, 클라이언트에서는 직접적으로 접근할 수 없는 중요한 데이터를 처리합니다. 액션의 실행이 완료되면 서버는 그 결과를 클라이언트로 직렬화(serialize)하여 전달합니다. 클라이언트는 이 결과를 수신한 후 UI 상태에 반영하며, React는 클라이언트와 서버 간의 데이터를 자동으로 동기화하여 최종 사용자에게 업데이트된 UI를 제공합니다. 이를 통해 클라이언트는 서버와의 데이터 상호작용을 간소화할 수 있고, 복잡한 상태 동기화 작업을 크게 줄일 수 있습니다.
+
+아래 예시에서 내부 동작원리를 파악할 수 있습니다:
+
+**1 ) 서버 액션 정의**
+
+서버에서 실행될 `addUser` 액션을 작성합니다. 이 함수는 데이터베이스에 새로운 사용자를 추가하고, 성공 메시지를 반환합니다.
+
+```jsx
+// serverActions.js
+
+// 서버에서만 접근할 수 있는 데이터베이스 모듈을 임포트합니다.
+import { addUserToDatabase } from "./database";
+
+// 서버 액션 함수 정의
+export async function addUser(userData) {
+  try {
+    // 데이터베이스에 사용자 추가
+    const result = await addUserToDatabase(userData);
+    return { success: true, message: "User added successfully", userId: result.id };
+  } catch (error) {
+    return { success: false, message: "Failed to add user", error: error.message };
+  }
+}
+
+```
+
+위의 코드에서 `addUser` 함수는 사용자 정보를 데이터베이스에 저장하고, 성공 여부와 함께 결과를 반환하는 구조입니다. 이 결과는 직렬화된 형태로 클라이언트에 전달됩니다.
+
+**2 ) 클라이언트에서 서버 액션 호출**
+
+클라이언트 컴포넌트에서 `addUser` 서버 액션을 호출합니다. 여기서는 사용자의 입력을 받아 서버 액션을 호출하고, 반환된 직렬화된 결과를 사용하여 UI를 업데이트합니다.
+
+```jsx
+// ClientComponent.js
+
+import { addUser } from "./serverActions";
+
+function ClientComponent() {
+  // 상태를 관리하기 위한 상태 훅
+  const [statusMessage, setStatusMessage] = React.useState("");
+
+  // 서버 액션 호출 핸들러
+  async function handleAddUser() {
+    const userData = { name: "John Doe", email: "john@example.com" };
+
+    // 서버 액션 호출
+    const result = await addUser(userData);
+
+    // 직렬화된 결과에 따라 상태 업데이트
+    if (result.success) {
+      setStatusMessage(`User added successfully! ID: ${result.userId}`);
+    } else {
+      setStatusMessage(`Error: ${result.message}`);
+    }
+  }
+
+  return (
+    <div>
+      <button onClick={handleAddUser}>Add User</button>
+      <p>{statusMessage}</p>
+    </div>
+  );
+}
+
+export default ClientComponent;
+
+```
+
+위 코드에서 `handleAddUser` 함수는 버튼 클릭 시 서버 액션 `addUser`를 호출하고, 결과를 받아서 화면에 표시합니다.
+
+**3 ) 직렬화된 결과 예시**
+
+React Server Actions는 서버에서 직렬화된 형태의 데이터를 클라이언트에 전달하는데, 위의 예제에서 클라이언트가 받는 직렬화된 데이터 예시는 다음과 같습니다.
+
+```json
+{
+  "success": true,
+  "message": "User added successfully",
+  "userId": "12345"
+}
+
+```
+
+이 직렬화된 결과는 서버 액션의 실행 결과로 클라이언트에서 쉽게 사용할 수 있도록 JSON 형태로 변환된 것입니다. `success` 값에 따라 클라이언트에서 메시지를 다르게 설정하며, `userId`와 같은 추가 정보도 포함되어 있어 필요에 따라 활용할 수 있습니다.
+
+이러한 **React Server Actions**의 구조를 통해 서버에서만 처리해야 하는 작업을 클라이언트와 안전하게 연결할 수 있습니다. 클라이언트는 서버 액션을 로컬 함수처럼 호출할 수 있어 API 호출과 비슷한 작업을 훨씬 간단하게 처리할 수 있습니다.
