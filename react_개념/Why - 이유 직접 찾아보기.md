@@ -21,17 +21,21 @@ React 공식 문서를 살펴보면서 기존에 이해하였던 내용을 더 �
 
 - [9. React Hooks의 기본 동작원리는 무엇일까?](#9-react-hooks의-기본-동작원리는-무엇일까)
 
-- [10. React가 어떻게 SPA를 구현할까?](#10-react가-어떻게-spa를-구현할까)
+- [10. useState, useReducer의 동작원리는?](#10-usestate-usereducer의-동작원리는)
 
-- [11. React SSR은 어떻게 동작할까?](#11-react-ssr은-어떻게-동작할까)
+- [11. Context API의 동작원리는?](#11-context-api의-동작원리는)
 
-- [12. React Hydration은 어떻게 동작할까?](#12-react-hydration은-어떻게-동작할까)
+- [12. React가 어떻게 SPA를 구현할까?](#12-react가-어떻게-spa를-구현할까)
 
-- [13. React 18의 동시성(Concurrency)이란?](#13-react-18의-동시성concurrency이란)
+- [13. React SSR은 어떻게 동작할까?](#13-react-ssr은-어떻게-동작할까)
 
-- [14. React Server Components는 무엇일까?](#14-react-server-components는-무엇일까)
+- [14. React Hydration은 어떻게 동작할까?](#14-react-hydration은-어떻게-동작할까)
 
-- [15. React Server Actions은 무엇일까?](#15-react-server-actions은-무엇일까)
+- [15. React 18의 동시성(Concurrency)이란?](#15-react-18의-동시성concurrency이란)
+
+- [16. React Server Components는 무엇일까?](#16-react-server-components는-무엇일까)
+
+- [17. React Server Actions은 무엇일까?](#17-react-server-actions은-무엇일까)
 
 <br/>
 
@@ -832,9 +836,349 @@ function resolveDispatcher() {// Hooks에서 호출하는 함수 코드.
 
 <br/>
 
-## 10. React가 어떻게 SPA를 구현할까?
+## 10. useState, useReducer의 동작원리는?
+React의 상태 관리 훅인 `useState`와 `useReducer`는 각각 단순한 상태 관리와 복잡한 상태 관리를 다루는 데 사용됩니다. 이 두 훅은 React의 내부 메커니즘인 **Fiber Reconciliation**과 긴밀히 연관되어 있으며, 상태 업데이트와 컴포넌트 렌더링을 효율적으로 처리합니다. 
 
-리액트에서 SPA를 구현할 때는 **클라이언트 측 라우팅(Client-side Routing)**을 사용합니다. 보통 웹 애플리케이션에서는 URL이 변경될 때마다 서버로 요청을 보내 페이지를 새로 로드하지만, 리액트에서는 `react-router` 같은 라우팅 라이브러리를 활용하여 클라이언트 측에서 라우팅을 처리합니다.
+### useState 내부 동작
+
+**1 ) 상태 저장**
+
+- `useState`는 내부적으로 상태를 저장하기 위해 React의 **hook state queue**를 사용합니다.
+- 상태는 `Fiber Node`에 연결된 `memoizedState`라는 링크드 리스트 형태로 관리됩니다.
+
+**2 ) 초기화**
+
+- 첫 번째 렌더링 시, `useState`는 초기값을 받아 상태를 초기화합니다.
+- React는 이 상태와 관련된 **setter function**을 반환합니다.
+
+**3 ) 상태 업데이트**
+
+- `setState`가 호출되면 새로운 상태를 React의 업데이트 큐에 넣습니다.
+- React는 이 업데이트를 비동기적으로 처리하여 성능을 최적화합니다.
+    - 여러 개의 `setState` 호출은 하나의 렌더링 주기에서 배치 처리됩니다.
+- 상태 업데이트 후, React는 **reconciliation** 과정을 통해 컴포넌트를 다시 렌더링합니다.
+
+**내부 메커니즘**
+
+- React는 `useState` 호출 순서를 보장하기 위해 **훅 호출 순서가 고정**되어야 한다는 제약을 둡니다.
+- React는 `Fiber` 구조를 탐색하며 각 훅의 상태를 `memoizedState`에 저장하고 업데이트 큐를 관리합니다.
+
+### useState 내부 동작 코드 구현하기
+
+```jsx
+function createUseState() {
+  let state; // 상태를 저장할 변수
+  let queue = []; // 상태 업데이트 큐
+
+  function useState(initialValue) {
+    if (state === undefined) {
+      state = initialValue; // 초기 상태 설정
+    }
+
+    // 상태를 업데이트하는 함수
+    function setState(newValue) {
+      queue.push(newValue); // 업데이트 큐에 추가
+      processQueue(); // 업데이트 큐 처리
+    }
+
+    function processQueue() {
+      while (queue.length > 0) {
+        state = queue.shift(); // 큐에서 꺼내 상태 갱신
+      }
+      render(); // 상태가 변경되면 다시 렌더링
+    }
+
+    return [state, setState];
+  }
+
+  function render() {
+    console.log("Rendered with state:", state);
+  }
+
+  return useState;
+}
+
+// 예시 실행
+const useState = createUseState();
+const [count, setCount] = useState(0);
+
+console.log(count); // 0
+setCount(1);
+setCount(2);
+
+```
+
+- `useState`는 상태를 `state` 변수에 저장하고, `setState`로 상태를 업데이트합니다.
+- 상태 업데이트는 큐에 저장되며, 처리 후 렌더링을 트리거합니다.
+
+### useReducer의 내부 동작
+
+`useReducer`는 상태 전이 로직을 명확하게 정의하고, 복잡한 상태를 관리하기 위해 사용됩니다. 동작 원리는 `useState`와 유사하지만, 다음과 같은 차별점을 가집니다.
+
+**1 ) 상태 저장**
+
+- `useReducer`는 상태와 업데이트 로직을 `reducer` 함수와 함께 관리합니다.
+
+**2 ) 초기화**
+
+- `useReducer`는 초기 상태를 설정하고, `reducer` 함수와 `dispatch` 함수를 반환합니다.
+- `initialState`는 `reducer` 함수로 전달되며, 복잡한 초기화를 위해 `init` 함수도 사용할 수 있습니다.
+
+**3 ) 상태 업데이트**
+
+- `dispatch` 함수가 호출되면, React는 `action`을 `reducer` 함수에 전달합니다.
+- `reducer` 함수는 `state`와 `action`을 기반으로 새로운 상태를 반환합니다.
+    - 이 과정에서 상태 업데이트 로직이 명확히 분리되므로 테스트 및 디버깅이 용이합니다.
+
+**내부 메커니즘** 
+
+- `useReducer`도 `useState`와 마찬가지로 `Fiber Node`의 `memoizedState`를 사용합니다.
+- `dispatch` 호출 시 업데이트가 큐에 추가되며, React가 최적화된 방식으로 상태를 처리합니다.
+
+### useReducer 내부 동작 코드 구현하기
+
+```jsx
+function createUseReducer() {
+  let state; // 상태 저장
+  let queue = []; // 업데이트 큐
+
+  function useReducer(reducer, initialState) {
+    if (state === undefined) {
+      state = initialState; // 초기 상태 설정
+    }
+
+    // 액션을 처리하는 디스패치 함수
+    function dispatch(action) {
+      queue.push(action); // 액션 큐에 추가
+      processQueue(); // 업데이트 큐 처리
+    }
+
+    function processQueue() {
+      while (queue.length > 0) {
+        const action = queue.shift(); // 큐에서 액션 꺼냄
+        state = reducer(state, action); // 리듀서로 상태 갱신
+      }
+      render(); // 상태가 변경되면 다시 렌더링
+    }
+
+    return [state, dispatch];
+  }
+
+  function render() {
+    console.log("Rendered with state:", state);
+  }
+
+  return useReducer;
+}
+
+// 예시 실행
+const useReducer = createUseReducer();
+
+// 리듀서 함수 정의
+function counterReducer(state, action) {
+  switch (action.type) {
+    case "increment":
+      return state + 1;
+    case "decrement":
+      return state - 1;
+    default:
+      return state;
+  }
+}
+
+const [count, dispatch] = useReducer(counterReducer, 0);
+
+console.log(count); // 0
+dispatch({ type: "increment" });
+dispatch({ type: "increment" });
+dispatch({ type: "decrement" });
+```
+
+### 클로저와  useState, useReducer
+
+클로저는 **함수가 선언될 당시의 환경(변수 등)을 기억**하고, 이를 함수가 호출되는 시점에도 참조할 수 있도록 만드는 자바스크립트의 기능입니다.
+
+**useState의 클로저 활용**
+
+- `useState`는 `state`와 `setState`를 반환하는데, 여기서 `setState`는 상태 업데이트 함수입니다.
+- `setState`는 컴포넌트가 리렌더링될 때마다 새로운 함수로 재정의되지 않습니다. 대신, 상태값을 기억하고 있는 클로저를 통해 이전 상태에 접근합니다.
+
+**useReducer의 클로저 화용**
+
+- `useReducer`는 상태값(`state`)과 리듀서 함수(`reducer`)를 클로저로 캡슐화하여, `dispatch` 함수 호출 시 이전 상태에 접근할 수 있도록 합니다.
+- 상태 변경 로직은 `reducer` 함수에 캡슐화되어 외부에서 임의로 상태를 수정할 수 없습니다.
+
+`useReducer`와 `useState`는 세부 동작과 쓰임에만 차이가 있을 뿐, 클로저를 활용해 값을 저장해서 state를 관리한다는 사실은 동일합니다.
+
+**따라서, useRedcuer로 useState을 useState로 useReducer를 구현해 볼 수 있습니다.**
+
+### useState로 useReducer 구현하기
+
+```jsx
+function useReducerWithState(reducer, initialState) {
+  const [state, setState] = useState(initialState);
+
+  function dispatch(action) {
+    const newState = reducer(state, action); // 리듀서를 통해 상태 계산
+    setState(newState); // 상태 업데이트
+  }
+
+  return [state, dispatch];
+}
+
+// 예제 실행
+function counterReducer(state, action) {
+  switch (action.type) {
+    case "increment":
+      return state + 1;
+    case "decrement":
+      return state - 1;
+    default:
+      return state;
+  }
+}
+
+const [count, dispatch] = useReducerWithState(counterReducer, 0);
+dispatch({ type: "increment" }); // count: 1
+dispatch({ type: "decrement" }); // count: 0
+
+```
+
+### useReducer로 useState 구현하기
+```jsx
+function useStateWithReducer(initialValue) {
+  // 단순 상태 업데이트 리듀서
+  function stateReducer(state, action) {
+    return action; // 새로운 상태를 그대로 반환
+  }
+
+  const [state, dispatch] = useReducer(stateReducer, initialValue);
+
+  function setState(newValue) {
+    dispatch(newValue); // 새 상태를 액션으로 전달
+  }
+
+  return [state, setState];
+}
+
+// 예제 실행
+const [count, setCount] = useStateWithReducer(0);
+setCount(1); // count: 1
+setCount(2); // count: 2
+```
+
+<br/>
+
+## 11. Context API의 동작원리는?
+
+**Context API**는 컴포넌트 트리 전반에 걸쳐 데이터를 쉽게 전달할 수 있도록 설계된 메커니즘입니다. 일반적으로 컴포넌트 계층 구조에서 props를 계속 전달해야 하는 "prop drilling" 문제를 해결하기 위해 사용됩니다.
+
+### Context API의 내부 동작 원리
+
+Context API의 동작은 크게 두 가지 단계로 나뉩니다:
+
+**데이터 제공 (Provider)**
+
+- `Provider`는 Context에서 데이터를 공급하는 역할을 합니다.
+- React는 내부적으로 **Provider의 `value`를 추적**하며, `value`가 변경될 때마다 하위 트리의 모든 Consumer를 다시 렌더링합니다.
+- `Provider`는 React의 **구독/발행(pub/sub)** 메커니즘을 사용합니다.
+- 각 `Provider`는 고유한 Context를 생성하며, 이를 통해 트리 구조 내에서 데이터 흐름을 제어합니다.
+- 데이터가 업데이트되면 React는 `context._currentValue`를 업데이트하고, 관련 Consumer에 알립니다.
+
+**데이터 소비 (Consumer)**
+
+- `Consumer` 또는 `useContext`는 Context에서 제공된 데이터를 구독합니다.
+- React는 **렌더링 최적화**를 위해 Context 값을 직접 비교하지 않습니다. 대신, `value`가 변경될 때마다 관련 Consumer를 무조건 다시 렌더링합니다.
+- Consumer는 Context에서 최신 `value`를 가져와 렌더링에 사용합니다.
+- `useContext` 훅은 내부적으로 Consumer를 간소화한 형태로 작동합니다. 해당 훅을 호출하면 React는 현재 컨텍스트 값을 반환합니다.
+
+### Context API의 내부 구현 코드
+
+실제 Context API의 코드는 훨씬 복잡합니다. 단순화된 코드로 재현한 코드입니다.
+
+```jsx
+function createContext(defaultValue) {
+  const context = {
+    _currentValue: defaultValue, // 현재 Context 값
+    Provider: null,
+    Consumer: null
+  };
+
+  function Provider({ value, children }) {
+    context._currentValue = value; // 새로운 값을 설정
+    return children; // 자식 컴포넌트를 그대로 렌더링
+  }
+
+  function Consumer({ children }) {
+    return children(context._currentValue); // 현재 값을 전달
+  }
+
+  context.Provider = Provider;
+  context.Consumer = Consumer;
+
+  return context;
+}
+```
+
+### useContext
+
+`useContext`는 React의 Context API에서 제공된 **Context 값**을 읽어오는 역할을 합니다. 이를 통해 컴포넌트가 직접적으로 Context의 데이터를 구독(subscribe)할 수 있습니다.
+
+`useContext`는 특정 Context 객체를 인자로 받고, 그 Context에서 현재 제공되는 값을 반환합니다. 즉, Context의 `Provider`가 제공하는 `value`를 컴포넌트에서 사용할 수 있도록 합니다.
+
+### useContext의 내부 동작 원리
+
+**1 ) Context 트리 탐색**
+
+- `useContext`는 호출된 컴포넌트가 **어떤 Context를 참조하고 있는지** 확인합니다.
+- React는 컴포넌트 트리에서 가장 가까운 `Provider`를 탐색하여 해당 `value`를 반환합니다.
+- 만약 `Provider`가 없으면, `createContext` 호출 시 지정된 **기본값(default value)**을 반환합니다.
+
+**2 ) 값 구독 (Subscription)**
+
+- `useContext`는 내부적으로 **Context의 현재 값**을 참조합니다.
+- 이 값은 `Provider`가 갱신할 때마다 자동으로 업데이트됩니다.
+- React는 `useContext`가 반환한 값을 사용한 컴포넌트를 다시 렌더링하여 최신 상태를 반영합니다.
+
+**3 ) React의 렌더링 최적화**
+
+- React는 `Provider`의 `value`가 변경될 때 Context를 사용하는 모든 컴포넌트를 다시 렌더링합니다.
+- 이는 `useContext`가 컴포넌트를 Context 값에 **구독 상태로 등록**하기 때문입니다.
+
+### useContext 내부 구현 코드
+
+실제 useContext 내부 코드는 훨씬 복잡합니다. 단순한 코드로 재현한 코드입니다.
+
+```jsx
+function useContext(Context) {
+  const currentContext = ReactCurrentDispatcher.current.readContext(Context);
+
+  if (currentContext === undefined) {
+    throw new Error("useContext must be used within a Provider");
+  }
+
+  return currentContext;
+}
+```
+
+**Context 값 읽기**
+
+- `ReactCurrentDispatcher`는 React의 훅 호출 관리를 담당하는 객체입니다.
+- `readContext` 메서드는 호출된 Context의 현재 값을 읽습니다.
+
+**에러 처리**
+
+- Context를 `Provider` 없이 사용하면, React는 기본값을 반환하거나 에러를 던질 수 있습니다.
+
+**값 반환**
+
+- `useContext`는 가장 가까운 `Provider`에서 제공된 값을 반환합니다.
+
+<br/>
+
+## 12. React가 어떻게 SPA를 구현할까?
+
+리액트에서 SPA를 구현할 때는 **클라이언트 측 라우팅(Client-side Routing)** 을 사용합니다. 보통 웹 애플리케이션에서는 URL이 변경될 때마다 서버로 요청을 보내 페이지를 새로 로드하지만, 리액트에서는 `react-router` 같은 라우팅 라이브러리를 활용하여 클라이언트 측에서 라우팅을 처리합니다.
 
 - `react-router`는 페이지 전환이 필요할 때 브라우저의 `history API`를 이용하여 URL을 변경하지만 실제로 서버에 요청을 보내지 않습니다.
 - 이를 통해 URL은 변경되지만 페이지 전체가 새로 고쳐지지 않으며, 오직 필요한 컴포넌트만 교체되거나 업데이트됩니다.
@@ -971,7 +1315,7 @@ export function Link({ to, children }) {
 
 <br/>
 
-## 11. React SSR은 어떻게 동작할까?
+## 13. React SSR은 어떻게 동작할까?
 
 React에서 SSR(Server-Side Rendering)은 클라이언트 측에서 JavaScript로 컴포넌트를 렌더링하기 전에 **서버에서 HTML을 생성**하여 클라이언트에 전달하는 방식입니다. 이를 통해 초기 페이지 로딩 속도를 높이고, SEO(Search Engine Optimization)를 개선하며, 느린 네트워크 환경에서 사용자 경험을 개선할 수 있습니다.
 
@@ -1010,7 +1354,7 @@ React의 SSR은 기본적으로 `ReactDOMServer` 패키지의 메서드를 사�
 
 <br/>
 
-## 12. React Hydration은 어떻게 동작할까?
+## 14. React Hydration은 어떻게 동작할까?
 
 react-dom/server를 통해 사전에 만들어진 HTML로 그려진 브라우저 DOM 노드 내부에 React 컴포넌트를 렌더링합니다.
 
@@ -1272,7 +1616,7 @@ function popHydrationState(fiber: Fiber): boolean {
 
 <br/>
 
-## 13. React 18의 동시성(Concurrency)이란?
+## 15. React 18의 동시성(Concurrency)이란?
 
 동시성은 **여러 작업을 순차적이면서도 중단 없이 수행할 수 있도록 스케줄링하는 방식**입니다. CPU가 여러 작업을 동시에 실행하는 것처럼 보이도록 빠르게 전환하면서 처리합니다. 이는 주로 **멀티태스킹** 또는 **비동기 작업**을 통해 이루어지며, 웹 애플리케이션에서는 자바스크립트의 `async`/`await`나 `Promise`와 같은 비동기 처리가 동시성을 구현하는 방식에 해당합니다.
 동시성은 동시에 실행되는 것처럼 보이지만 실제로는 단일 코어에서 작업이 빠르게 번갈아 가며 수행됩니다.예를 들어 비동기적으로 API 요청을 보내고, 데이터 응답이 올 때까지 기다리지 않고 다른 작업을 수행합니다.
@@ -1433,7 +1777,7 @@ React 동시성 모드는 스케줄러와 Fiber 구조를 통해 **작업을 �
 
 <br/>
 
-## 14. React Server Components는 무엇일까?
+## 16. React Server Components는 무엇일까?
 
 **서버 컴포넌트**는 React 18에서 도입된 새로운 개념으로, React 컴포넌트를 서버에서만 렌더링하고 클라이언트로는 그 결과만을 전달합니다. 클라이언트 컴포넌트와 달리 서버 컴포넌트는 클라이언트에 JavaScript 코드나 상태 관리를 전달하지 않고, HTML과 같은 최종 결과만 전달하므로 **클라이언트의 자원 소비를 최소화**할 수 있습니다.
 
@@ -1557,7 +1901,7 @@ Client Component는 곧 함수이므로, 직렬화를 할 수 없습니다.
 
 <br/>
 
-## 15. React Server Actions은 무엇일까?
+## 17. React Server Actions은 무엇일까?
 
 **React Server Actions**는 클라이언트와 서버 간의 통신을 단순화하여, 클라이언트에서 서버로 함수를 호출하는 것처럼 서버 액션을 실행하고 결과를 반영할 수 있게 해줍니다. 이로 인해 서버에서 처리해야 하는 로직(데이터베이스 업데이트, 외부 API 호출 등)을 클라이언트 코드에서 직접 다루는 것처럼 구현할 수 있어 개발자 경험이 크게 향상됩니다.
 
