@@ -48,6 +48,8 @@
 
 **18. [📘 useTransition & useDeferredValue](https://spotted-operation-dcc.notion.site/18-useTransition-useDeferredValue-12212b90211180d6a8e1ed8dd66bad7f)**
 
+**[❓ Why - 이유 직접 찾아보기](https://spotted-operation-dcc.notion.site/Why-13812b9021118034a7d1d6dcc46a801e?pvs=74)**
+
 ---
 
 ### 🗂 추가 자료
@@ -75,6 +77,8 @@
 **[📘 React 상태관리 라이브러리 구현](https://spotted-operation-dcc.notion.site/React-98620e397bd046abac6549001b65fc67?pvs=74)**
 
 **[📘 React 렌더링 깊게 살펴보기](https://spotted-operation-dcc.notion.site/React-13112b90211180d5bf86dbffbf2687a8?pvs=74)**
+
+**[📘 React Hooks 파헤치기](https://spotted-operation-dcc.notion.site/React-Hooks-14112b902111809cb25ec60b55be523e)**
 
 **[📘 React Hydration 깊게 살펴보기](https://spotted-operation-dcc.notion.site/Hydration-13212b902111808db3c8d673162d446b)**
 
