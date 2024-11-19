@@ -662,7 +662,7 @@ nextCurrentHook가 존재하는 경우는 기존의 current VirtualDOM 요소의
 
 <br/>
 
-### MoutState
+### moutState
 
 마운트 시점에 불러와지는 useState인 mounState
 
@@ -899,8 +899,11 @@ const queue = hook.queue;
 ```
 
 - `updateWorkInProgressHook()`을 호출하여 **현재 Fiber 노드에 연결된 Hook**을 가져옵니다.
+- `useReducer` 훅이 호출된 순서와 일치하는 훅을 가져옵니다.
 - `queue`는 상태 업데이트를 관리하는 **큐 객체**입니다.
     - 이 큐는 이전 렌더링에서 발생한 **상태 업데이트(action)** 들을 연결 리스트로 관리합니다.
+
+<br/>
 
 **Queue 유효성 검사**
 
@@ -912,6 +915,8 @@ invariant(
 ```
 
 - `queue`가 없으면 React 내부에서 오류가 발생했음을 의미합니다.
+- `queue`는 상태 업데이트를 관리하는 객체입니다. 여기에는 디스패치된 액션, 리듀서 함수, 마지막 상태 등의 정보가 포함됩니다.
+- `invariant`는 `queue`가 null인 경우 오류를 발생시킵니다. `queue`가 null이라면 React 내부적으로 문제가 있다는 뜻입니다.
 
 <br/>
 
@@ -922,7 +927,8 @@ queue.lastRenderedReducer = reducer;
 ```
 
 - 현재 사용 중인 리듀서를 큐에 저장합니다.
-- 이는 이후 업데이트에서 동일한 리듀서를 사용할 수 있도록 합니다.
+- `lastRenderedReducer`는 가장 최근에 렌더링된 리듀서 함수입니다.
+- 리듀서가 변경될 수 있으므로, 항상 최신 리듀서를 `queue`에 저장해 업데이트 로직이 정확히 동작하도록 합니다.
 
 <br/>
 
@@ -960,6 +966,10 @@ if (numberOfReRenders > 0) {
 }
 ```
 
+- `numberOfReRenders`는 현재 컴포넌트가 재렌더링된 횟수를 나타냅니다.
+    - 0보다 크면, 이는 재렌더링 중임을 의미하며, 해당 렌더링 단계에서 추가된 상태 업데이트를 처리합니다.
+- `queue.dispatch`는 디스패치 함수로, 액션을 큐에 추가하는 역할을 합니다.
+    - 재렌더링 중에도 동일한 디스패치 함수가 사용됩니다.
 - **렌더링 중**(`render phase`) 상태 업데이트가 발생한 경우 이를 처리합니다.
     - `renderPhaseUpdates`: 현재 렌더링 중 발생한 상태 업데이트를 저장하는 맵입니다.
     - 만약 `renderPhaseUpdates`가 존재한다면, 이를 처리하여 **새로운 상태를 계산**합니다.
@@ -967,7 +977,7 @@ if (numberOfReRenders > 0) {
 
 <br/>
 
-**일반적인 상태 업데이트 처리**
+**업데이트 큐 초기화**
 
 ```jsx
 const last = queue.last;
@@ -995,7 +1005,7 @@ if (baseUpdate !== null) {
 
 <br/>
 
-**상태 업데이트 처리**
+**업데이트 큐 순회 및 상태 계산**
 
 ```jsx
 if (first !== null) {
@@ -1005,7 +1015,9 @@ if (first !== null) {
   let prevUpdate = baseUpdate; // 이전 업데이트를 추적
   let update = first; // 현재 처리 중인 업데이트
   let didSkip = false; // 우선순위가 낮아 건너뛴 업데이트가 있는지 여부
-
+else {
+    first = last !== null ? last.next : null;
+  }
   do {
     const updateExpirationTime = update.expirationTime;
     if (updateExpirationTime < renderExpirationTime) {
@@ -1075,7 +1087,10 @@ if (first !== null) {
 }
 ```
 
-- **상태가 변경되었는지 확인**하고, 변경된 경우 **Fiber에 변경 사항을 표시**합니다.
+- `is(newState, hook.memoizedState)`는 상태가 변경되었는지 비교합니다.
+- 상태가 변경된 경우, 작업 중인 React 노드(Fiber)에 업데이트가 발생했음을 표시합니다.
+- `hook.memoizedState`: 업데이트된 상태를 저장합니다.
+- `hook.baseState`: 큐가 비어 있는 경우 초기 상태를 새로운 상태로 업데이트합니다.
 - `memoizedState`, `baseUpdate`, `baseState`를 각각 최신 값으로 업데이트합니다.
 
 <br/>
@@ -1087,7 +1102,7 @@ const dispatch: Dispatch<A> = (queue.dispatch: any);
 return [hook.memoizedState, dispatch];
 ```
 
-최종적으로 `useState`와 동일하게 `[현재 상태, dispatch 함수]`를 반환합니다.
+최종적으로  `[현재 상태, dispatch 함수]`를 반환합니다.
 
 <br/>
 
@@ -1378,7 +1393,10 @@ function App() {
     - **초기 상태**와 `setState` 함수(`dispatch`)가 반환됩니다.
     - 즉, `[count, setCount] = [0, dispatch]`가 됩니다.
 9. **컴포넌트가 렌더링되어 `App` 함수 종료**:
-    - JSX가 변환된 React 엘리먼트가 생성되고, 브라우저에 렌더링됩니다.
+    - Fiber 트리를 기반으로 React는 **React DOM 렌더러**를 통해 브라우저의 실제 DOM을 업데이트합니다.
+	- 이 단계에서 컴포넌트의 **최종 렌더링 결과가 브라우저 화면에 표시**됩니다.
+
+<br/>
 
 **상태 업데이트 (`setCount`)**
 
