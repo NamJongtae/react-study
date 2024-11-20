@@ -78,7 +78,9 @@
 
 **[📘 React 렌더링 깊게 살펴보기](https://spotted-operation-dcc.notion.site/React-13112b90211180d5bf86dbffbf2687a8?pvs=74)**
 
-**[📘 React Hooks 파헤치기](https://spotted-operation-dcc.notion.site/React-Hooks-14112b902111809cb25ec60b55be523e)**
+**[📘 React Hooks 파헤치기 (1) - useState Hooks의 동작 원리](https://spotted-operation-dcc.notion.site/React-Hooks-1-useState-Hooks-14112b902111809cb25ec60b55be523e?pvs=74)**
+
+**[📘 React Hooks 파헤치기 (2) - useReducer](https://spotted-operation-dcc.notion.site/React-Hooks-2-useReducer-14312b90211180ee9c5cd898e64c1ff1?pvs=74)**
 
 **[📘 React Hydration 깊게 살펴보기](https://spotted-operation-dcc.notion.site/Hydration-13212b902111808db3c8d673162d446b)**
 
