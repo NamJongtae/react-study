@@ -1355,23 +1355,44 @@ function App() {
 }
 ```
 
+<br/>
+
 **첫 렌더링 시**
+
+![](https://velog.velcdn.com/images/njt6419/post/47392a7e-451b-4fb6-bddb-ff9e5ded6545/image.png)
 
 1. **JSX 컴파일**
     - `App.jsx`가 **Babel**에 의해 `React.createElement` 함수 호출로 변환됩니다.
     - 컴파일된 결과는 React 엘리먼트 객체입니다.
+
+
+<br/>
+
 2. **React 엘리먼트 객체 → Fiber로 확장**
     - React 엘리먼트 객체가 **Fiber 노드**로 확장됩니다.
     - 이 Fiber 노드는 컴포넌트의 상태와 업데이트를 관리합니다.
+
+
+<br/>
+
 3. **초기 렌더링 - `renderWithHooks` 호출**
     - 컴포넌트가 렌더링될 때, `renderWithHooks` 함수가 호출됩니다.
     - 이때 `current` Fiber가 존재하지 않으므로, React는 **마운트 단계**로 진입합니다.
+
+<br/>
+
 4. **`mountState` 호출 (`useState` 초기화)**
     - `useState` 훅이 호출되면, `mountState` 함수가 실행됩니다.
     - `mountWorkInProgressHook()` 함수가 호출되어 새로운 훅 객체를 생성합니다.
+
+<br/>
+
 5. **`mountWorkInProgressHook()` 실행**
     - 새로운 `hook` 객체가 생성됩니다.
     - 이 `hook` 객체는 **Fiber 노드의 `memoizedState`에 연결**됩니다.
+
+<br/>
+
 6. **`useState`의 초기 상태 설정**
     - `mountState`에서 `initialState` (여기서는 `0`)가 `hook.memoizedState`에 저장됩니다.
     - `hook.queue` 객체가 초기화됩니다.
@@ -1389,9 +1410,15 @@ function App() {
 7. **`dispatch` (즉, `setState`) 함수 생성**
     - `dispatch` 함수가 생성되어 `hook.queue.dispatch`에 저장됩니다.
     - 이 `dispatch`는 `setState` 역할을 하며, 상태를 업데이트할 때 사용됩니다.
+    
+<br/>
+
 8. **`mountState` 반환**
     - **초기 상태**와 `setState` 함수(`dispatch`)가 반환됩니다.
     - 즉, `[count, setCount] = [0, dispatch]`가 됩니다.
+
+<br/>
+
 9. **컴포넌트가 렌더링되어 `App` 함수 종료**:
     - Fiber 트리를 기반으로 React는 **React DOM 렌더러**를 통해 브라우저의 실제 DOM을 업데이트합니다.
 	- 이 단계에서 컴포넌트의 **최종 렌더링 결과가 브라우저 화면에 표시**됩니다.
@@ -1400,12 +1427,20 @@ function App() {
 
 **상태 업데이트 (`setCount`)**
 
+![](https://velog.velcdn.com/images/njt6419/post/02267aa6-dc5e-4c42-b281-126f8f2fd6bc/image.png)
+
 1. **`increment` 또는 `decrement` 함수 호출 시**
     - `setCount(prev => prev + 1)` 혹은 `setCount(prev => prev - 1)`이 호출됩니다.
     - 이때, `dispatchAction` 함수가 실행됩니다.
+
+<br/>
+
 2. **`updateState` 호출 (상태 업데이트)**
     - `dispatchAction` 내부에서 `updateState`가 호출됩니다.
     - `updateWorkInProgressHook()`을 호출하여 **기존의 훅 객체**를 가져옵니다.
+
+<br/>
+
 3. **업데이트 큐 처리**
     - `updateState`에서 `hook.queue`에 쌓인 **업데이트 큐**를 순회합니다.
     - `basicStateReducer`가 실행되어 새로운 상태를 계산합니다.
@@ -1415,15 +1450,26 @@ function App() {
           return typeof action === 'function' ? action(state) : action;
         }
         ```
-        
+
+<br/>
+
 4. **새로운 상태 설정**
     - 새로 계산된 상태(`newState`)가 `hook.memoizedState`와 `queue.lastRenderedState`에 저장됩니다.
+    
+<br/>
+
 5. **컴포넌트 리렌더링 트리거**
     - `scheduleUpdateOnFiber` 함수가 호출되어 해당 Fiber가 업데이트 큐에 추가됩니다.
     - React는 이 Fiber를 다시 렌더링합니다.
+    
+<br/>
+
 6. **`renderWithHooks`가 다시 호출됨**
     - 이번에는 `updateState`가 호출됩니다 (초기 렌더링 시 `mountState`와 다름).
     - 이전에 저장된 상태와 `dispatch` 함수가 반환됩니다.
+    
+<br/>
+
 7. **컴포넌트 리렌더링 완료**
     - 새로운 상태(`count`)가 반영된 컴포넌트가 렌더링됩니다.
 
@@ -1431,7 +1477,7 @@ function App() {
 
 ### 정리
 
-![](https://velog.velcdn.com/images/njt6419/post/7443394a-08ee-4bde-9df0-a916b87d43fe/image.png)
+![](https://velog.velcdn.com/images/njt6419/post/825ba963-b463-490e-8a16-252b745bad8d/image.png)
 
 - hook은 Fiber 객체에 memoizedState 프로퍼티 키값으로 저장됩니다.
 - hook은 여러개를 사용할 수 있으며, 여러가지 값을 가지도록 관리됩니다. 이를 위해 hook은 링크드리스트로 구현됩니다.
