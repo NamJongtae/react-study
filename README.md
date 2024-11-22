@@ -82,6 +82,8 @@
 
 **[📘 React Hooks 파헤치기 (2) - useReducer](https://spotted-operation-dcc.notion.site/React-Hooks-2-useReducer-14312b90211180ee9c5cd898e64c1ff1?pvs=74)**
 
+**[📘 React Hooks 파헤치기 (3) - useEffect](https://spotted-operation-dcc.notion.site/React-Hooks-3-useEffect-14512b90211180c89bf5e9ab38d2d08f?pvs=74)**
+
 **[📘 React Hydration 깊게 살펴보기](https://spotted-operation-dcc.notion.site/Hydration-13212b902111808db3c8d673162d446b)**
 
 **[📘 React 18 - 변경 사항](https://spotted-operation-dcc.notion.site/Server-Components-12112b902111802d9942f430c11cff22)**
